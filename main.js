@@ -12,6 +12,8 @@ var INFOS = 2;
 // Phase 1 features
 var showLabels = true; // Toggle for showing node/edge labels
 var nodeStyle = 'filled'; // 'filled' or 'open' (hollow circles)
+var traceBackMode = false; // Whether we're in trace-back mode
+var traceBackIndex = {}; // Store current playback position for each tracked vertex
 
 function reset() {
     allVelocities = [];
@@ -311,7 +313,33 @@ function keypress(key) {
 
 var resized = false;
 function idle() {
-    if (attractor && curVertex >= 0 && allVelocities.length && link.fixed.indexOf(curVertex) < 0) {
+    // Trace back mode - move nodes backwards along their traces
+    if (traceBackMode) {
+        var stillPlaying = false;
+        _.each(tracks, function(track, i) {
+            if (track.length > 0) {
+                if (!(i in traceBackIndex)) {
+                    traceBackIndex[i] = track.length - 1; // Start at end
+                }
+                
+                if (traceBackIndex[i] >= 0) {
+                    link.vertices[i] = track[traceBackIndex[i]];
+                    traceBackIndex[i]--;
+                    stillPlaying = true;
+                }
+            }
+        });
+        
+        if (!stillPlaying) {
+            // Reset when finished
+            traceBackMode = false;
+            traceBackIndex = {};
+        }
+        
+        update();
+    }
+    // Normal attractor mode
+    else if (attractor && curVertex >= 0 && allVelocities.length && link.fixed.indexOf(curVertex) < 0) {
         var num = numeric;
         var velocity0 = num.sub(attractor, link.vertices[curVertex]);
 
@@ -464,6 +492,41 @@ $(function() {
             display();
         } else {
             alert('Please select a node first by clicking on it.');
+        }
+    });
+    
+    $('#btn-trace-back').click(function() {
+        // Check if we have any traces
+        var hasTraces = Object.keys(tracks).length > 0;
+        
+        if (!hasTraces) {
+            alert('No traces available. Enable tracing on a node first and let it move.');
+            return;
+        }
+        
+        // Check if any trace has recorded points
+        var hasPoints = false;
+        _.each(tracks, function(track) {
+            if (track.length > 0) hasPoints = true;
+        });
+        
+        if (!hasPoints) {
+            alert('Traces are empty. Move the linkage to record a trace path first.');
+            return;
+        }
+        
+        // Toggle trace back mode
+        if (traceBackMode) {
+            traceBackMode = false;
+            traceBackIndex = {};
+            $(this).removeClass('active');
+            $(this).find('.btn-label').text('Trace Back');
+        } else {
+            traceBackMode = true;
+            traceBackIndex = {}; // Reset indices
+            attractor = undefined; // Turn off attractor
+            $(this).addClass('active');
+            $(this).find('.btn-label').text('Stop');
         }
     });
     
