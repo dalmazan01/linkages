@@ -65,7 +65,7 @@ function display() {
     c.fillStyle = 'rgb(6, 21, 36)';  // Your chosen color
     c.fillRect(0, 0, canvas.width(), canvas.height());
     if (!(info & 1)) {
-        c.fillStyle = colorString(0, 0, 0);
+        c.fillStyle = colorString(1, 1, 1);
         c.font = '10pt Helvetica';
         c.fillText(allVelocities.length + ' degrees of freedom',
                    50, 50);
