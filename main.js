@@ -9,6 +9,10 @@ var VIEWS = 8;
 var info = 0;
 var INFOS = 2;
 
+// Phase 1 features
+var showLabels = true; // Toggle for showing node/edge labels
+var nodeStyle = 'filled'; // 'filled' or 'open' (hollow circles)
+
 function reset() {
     allVelocities = [];
     curVertex = undefined;
@@ -41,8 +45,16 @@ function strokeLine(c, u, v) {
 }
 
 function fillPoint(c, v) {
-    c.fillRect(v[0] - VERTEX_SIZE/2, v[1] - VERTEX_SIZE/2,
-               VERTEX_SIZE, VERTEX_SIZE);
+    if (nodeStyle === 'open') {
+        // Draw hollow circle
+        c.beginPath();
+        c.arc(v[0], v[1], VERTEX_SIZE/2, 0, 2 * Math.PI);
+        c.stroke();
+    } else {
+        // Draw filled square (original)
+        c.fillRect(v[0] - VERTEX_SIZE/2, v[1] - VERTEX_SIZE/2,
+                   VERTEX_SIZE, VERTEX_SIZE);
+    }
 }
 
 function colorComponent(x) {
@@ -75,6 +87,15 @@ function display() {
         if (k == curEdge) c.strokeStyle = colorString(1, 0.3, 1);
         else c.strokeStyle = colorString(1, 0.3, 0);
         strokeLine(c, link.vertices[e.i], link.vertices[e.j]);
+        
+        // Draw edge label
+        if (showLabels) {
+            var midpoint = numeric.mul(0.5, numeric.add(link.vertices[e.i], link.vertices[e.j]));
+            c.fillStyle = colorString(1, 1, 0.5); // Light yellow for edge labels
+            c.font = '10px Arial';
+            var edgeLabel = 'E' + (k + 1);
+            c.fillText(edgeLabel, midpoint[0] + 5, midpoint[1] - 5);
+        }
     });
 
     if (!(view & 4)) {
@@ -111,11 +132,35 @@ function display() {
 
     _.each(link.vertices, function(v, i) {
         var b = i == curVertex ? 1 : 0;
-        var r = link.fixed.indexOf(i) != -1 ? 1 : 0;
+        var isFixed = link.fixed.indexOf(i) != -1;
+        var r = isFixed ? 1 : 0;
         var g = i in tracks ? 1 : 0;
+        
         if (i == curVertex || !(view & 2)) {
+            // Draw node
             c.fillStyle = colorString(r, g, b);
+            c.strokeStyle = colorString(r, g, b);
+            
+            if (nodeStyle === 'open') {
+                c.lineWidth = 2;
+            }
+            
             fillPoint(c, v);
+            
+            // Draw fixed point indicator (pin icon)
+            if (isFixed && showLabels) {
+                c.fillStyle = colorString(1, 0.2, 0.2); // Red for fixed
+                c.font = 'bold 16px Arial';
+                c.fillText('📍', v[0] + 8, v[1] - 8);
+            }
+            
+            // Draw node label
+            if (showLabels) {
+                c.fillStyle = colorString(1, 1, 1); // White labels
+                c.font = 'bold 12px Arial';
+                var label = String.fromCharCode(65 + i); // A, B, C, etc.
+                c.fillText(label, v[0] - 15, v[1] - 15);
+            }
         }
     });
 
@@ -469,6 +514,34 @@ $(function() {
             link = PRESETS[presetIndex].copy();
             update();
         }
+    });
+    
+    // Display toggle buttons
+    $('#btn-toggle-labels').click(function() {
+        showLabels = !showLabels;
+        if (showLabels) {
+            $(this).addClass('active');
+            $(this).find('.btn-label').text('Show Labels');
+        } else {
+            $(this).removeClass('active');
+            $(this).find('.btn-label').text('Hide Labels');
+        }
+        display();
+    });
+    
+    $('#btn-toggle-style').click(function() {
+        if (nodeStyle === 'filled') {
+            nodeStyle = 'open';
+            $(this).addClass('active');
+            $(this).find('.btn-label').text('Open Nodes');
+            $(this).find('.btn-icon').text('○');
+        } else {
+            nodeStyle = 'filled';
+            $(this).removeClass('active');
+            $(this).find('.btn-label').text('Filled Nodes');
+            $(this).find('.btn-icon').text('●');
+        }
+        display();
     });
 
     update();
