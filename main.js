@@ -62,10 +62,10 @@ function display() {
     canvas.attr('width', canvas.width());
     canvas.attr('height', canvas.height());
     var c = canvas[0].getContext('2d');
-    c.fillStyle = 'rgb(6, 21, 36)';  // Your chosen color
-    c.fillRect(0, 0, canvas.width(), canvas.height());
+    c.clearRect(0, 0, canvas.width, canvas.height);
+
     if (!(info & 1)) {
-        c.fillStyle = colorString(1, 1, 1);
+        c.fillStyle = colorString(0, 0, 0);
         c.font = '10pt Helvetica';
         c.fillText(allVelocities.length + ' degrees of freedom',
                    50, 50);
@@ -337,10 +337,115 @@ $(function() {
             mouseleft(x, y);
     });
 
-    $(window).keypress(function(event) {
-        keypress(String.fromCharCode(event.charCode));
-    }).resize(function() {
+    // Keyboard controls DISABLED - use toolbar buttons only
+    // $(window).keypress(function(event) {
+    //     keypress(String.fromCharCode(event.charCode));
+    // });
+    
+    $(window).resize(function() {
         resized = true;
+    });
+
+    // Toolbar button handlers
+    var toolMode = 'add-node'; // default mode
+    
+    function setToolMode(mode) {
+        toolMode = mode;
+        // Update button active states (except presets and clear)
+        $('.toolbar-btn').not('.preset-btn, .danger').removeClass('active');
+        $('#btn-' + mode).addClass('active');
+    }
+    
+    // Tool buttons
+    $('#btn-add-node').click(function() {
+        setToolMode('add-node');
+    });
+    
+    $('#btn-add-edge').click(function() {
+        setToolMode('add-edge');
+    });
+    
+    $('#btn-label').click(function() {
+        setToolMode('label');
+        alert('Label feature coming soon!');
+    });
+    
+    $('#btn-fix').click(function() {
+        if (curVertex !== undefined && curVertex >= 0) {
+            // Toggle fix state
+            var i = link.fixed.indexOf(curVertex);
+            if (i >= 0) {
+                link.fixed.splice(i, 1);
+            } else {
+                link.fixed.push(curVertex);
+            }
+            update();
+        } else {
+            alert('Please select a node first by clicking on it.');
+        }
+    });
+    
+    $('#btn-trace').click(function() {
+        if (curVertex !== undefined && curVertex >= 0) {
+            // Toggle trace
+            if (curVertex in tracks) {
+                delete tracks[curVertex];
+            } else {
+                tracks[curVertex] = [];
+            }
+            display();
+        } else {
+            alert('Please select a node first by clicking on it.');
+        }
+    });
+    
+    $('#btn-attractor').click(function() {
+        setToolMode('attractor');
+        if (curVertex === undefined || curVertex < 0) {
+            alert('Please select a node first, then shift-click to place attractor.');
+        }
+    });
+    
+    $('#btn-delete').click(function() {
+        if (curVertex !== undefined && curVertex >= 0) {
+            // Delete vertex
+            if (curVertex in tracks) {
+                var oldTracks = tracks;
+                tracks = {};
+                _.each(oldTracks, function(track, i) {
+                    if (i != curVertex)
+                        tracks[i < curVertex ? i : i-1] = track;
+                });
+            }
+            link.removeVertex(curVertex);
+            curVertex = undefined;
+            update();
+        } else if (curEdge !== undefined && curEdge >= 0) {
+            // Delete edge
+            link.removeEdge(curEdge);
+            curEdge = undefined;
+            update();
+        } else {
+            alert('Please select a node or edge first.');
+        }
+    });
+    
+    $('#btn-clear').click(function() {
+        if (confirm('Clear everything? This cannot be undone.')) {
+            reset();
+            link.clear();
+            update();
+        }
+    });
+    
+    // Preset buttons
+    $('.preset-btn').click(function() {
+        var presetIndex = parseInt($(this).attr('data-preset'));
+        if (presetIndex >= 0 && presetIndex < PRESETS.length) {
+            reset();
+            link = PRESETS[presetIndex].copy();
+            update();
+        }
     });
 
     update();
