@@ -16,12 +16,18 @@ var traceBackMode = false; // Whether we're in trace-back mode
 var traceBackIndex = {}; // Store current playback position for each tracked vertex
 var traceDirection = -1; // -1 for backward, 1 for forward
 
+// Custom label names
+var nodeNames = {}; // Custom names for nodes {index: "name"}
+var edgeNames = {}; // Custom names for edges {index: "name"}
+
 function reset() {
     allVelocities = [];
     curVertex = undefined;
     curEdge = undefined;
     attractor = undefined;
     tracks = {};
+    nodeNames = {}; // Clear custom node names
+    edgeNames = {}; // Clear custom edge names
 }
 
 var VELOCITY_COEFF = 1;
@@ -91,12 +97,12 @@ function display() {
         else c.strokeStyle = colorString(1, 0.3, 0);
         strokeLine(c, link.vertices[e.i], link.vertices[e.j]);
         
-        // Draw edge label
+        // Draw edge label (use custom name if available)
         if (showLabels) {
             var midpoint = numeric.mul(0.5, numeric.add(link.vertices[e.i], link.vertices[e.j]));
             c.fillStyle = colorString(1, 1, 0.5); // Light yellow for edge labels
             c.font = '10px Arial';
-            var edgeLabel = 'E' + (k + 1);
+            var edgeLabel = edgeNames[k] || ('E' + (k + 1));
             c.fillText(edgeLabel, midpoint[0] + 5, midpoint[1] - 5);
         }
     });
@@ -157,12 +163,15 @@ function display() {
                 c.fillText('📍', v[0] + 8, v[1] - 8);
             }
             
-            // Draw node label
+            // Draw node label (use custom name if available)
             if (showLabels) {
                 c.fillStyle = colorString(1, 1, 1); // White labels
                 c.font = 'bold 12px Arial';
-                var label = String.fromCharCode(65 + i); // A, B, C, etc.
+                var label = nodeNames[i] || String.fromCharCode(65 + i); // Custom or A, B, C, etc.
                 c.fillText(label, v[0] - 15, v[1] - 15);
+                
+                // Store label position for click detection (invisible)
+                // We'll handle this in mouse events
             }
         }
     });
@@ -430,6 +439,61 @@ $(function() {
             mousemiddle(x, y);
         else
             mouseleft(x, y);
+    });
+    
+    // Double-click to rename nodes or edges
+    $('#canvas').dblclick(function(event) {
+        var offset = $(this).offset();
+        var x = event.pageX - offset.left;
+        var y = event.pageY - offset.top;
+        
+        // Check if clicked near a node
+        var nodeIndex = -1;
+        var minDist = PICK_DIST2;
+        _.each(link.vertices, function(v, i) {
+            var dist2 = link.vertexDist2(x, y, i);
+            if (dist2 < minDist) {
+                minDist = dist2;
+                nodeIndex = i;
+            }
+        });
+        
+        if (nodeIndex >= 0) {
+            // Rename node
+            var currentName = nodeNames[nodeIndex] || String.fromCharCode(65 + nodeIndex);
+            var newName = prompt('Enter new name for node:', currentName);
+            if (newName !== null && newName.trim() !== '') {
+                nodeNames[nodeIndex] = newName.trim();
+                display();
+            }
+            return;
+        }
+        
+        // Check if clicked near an edge
+        var edgeIndex = -1;
+        var minEdgeDist = 15; // pixels
+        _.each(link.edges, function(e, k) {
+            var v1 = link.vertices[e.i];
+            var v2 = link.vertices[e.j];
+            var midpoint = numeric.mul(0.5, numeric.add(v1, v2));
+            var dx = x - midpoint[0];
+            var dy = y - midpoint[1];
+            var dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < minEdgeDist) {
+                minEdgeDist = dist;
+                edgeIndex = k;
+            }
+        });
+        
+        if (edgeIndex >= 0) {
+            // Rename edge
+            var currentEdgeName = edgeNames[edgeIndex] || ('E' + (edgeIndex + 1));
+            var newEdgeName = prompt('Enter new name for edge:', currentEdgeName);
+            if (newEdgeName !== null && newEdgeName.trim() !== '') {
+                edgeNames[edgeIndex] = newEdgeName.trim();
+                display();
+            }
+        }
     });
 
     // Limited keyboard controls - only backspace for delete
