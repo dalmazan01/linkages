@@ -15,6 +15,7 @@ var nodeStyle = 'filled'; // 'filled' or 'open' (hollow circles)
 var traceBackMode = false; // Whether we're in trace-back mode
 var traceBackIndex = {}; // Store current playback position for each tracked vertex
 var traceDirection = -1; // -1 for backward, 1 for forward
+var traceLoopMode = true; // true = loop/bounce, false = play once
 
 // Custom label names
 var nodeNames = {}; // Custom names for nodes {index: "name"}
@@ -351,13 +352,27 @@ function idle() {
             }
         });
         
-        // If reached an end, reverse direction
-        if (reachedStart && traceDirection === -1) {
-            traceDirection = 1;
-            stillPlaying = true;
-        } else if (reachedEnd && traceDirection === 1) {
-            traceDirection = -1;
-            stillPlaying = true;
+        // Handle end conditions based on loop mode
+        if (traceLoopMode) {
+            // Loop mode: bounce back and forth
+            if (reachedStart && traceDirection === -1) {
+                traceDirection = 1;
+                stillPlaying = true;
+            } else if (reachedEnd && traceDirection === 1) {
+                traceDirection = -1;
+                stillPlaying = true;
+            }
+        } else {
+            // Play once mode: stop when reaching the start
+            if (reachedStart && traceDirection === -1) {
+                traceBackMode = false;
+                traceBackIndex = {};
+                traceDirection = -1;
+                $('#btn-trace-back').removeClass('active');
+                $('#btn-trace-back').find('.btn-label').text('Trace Back');
+                $('#btn-trace-back').find('.btn-icon').text('⏮');
+                stillPlaying = false;
+            }
         }
         
         // Only stop if explicitly turned off or no tracks exist
@@ -619,6 +634,20 @@ $(function() {
             $(this).addClass('active');
             $(this).find('.btn-label').text('Playing');
             $(this).find('.btn-icon').text('⏸');
+        }
+    });
+    
+    // Toggle loop mode
+    $('#btn-trace-loop').click(function() {
+        traceLoopMode = !traceLoopMode;
+        if (traceLoopMode) {
+            $(this).addClass('active');
+            $(this).find('.btn-label').text('Loop Mode');
+            $(this).find('.btn-icon').text('🔁');
+        } else {
+            $(this).removeClass('active');
+            $(this).find('.btn-label').text('Play Once');
+            $(this).find('.btn-icon').text('▶');
         }
     });
     
