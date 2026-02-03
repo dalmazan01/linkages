@@ -337,10 +337,33 @@ $(function() {
             mouseleft(x, y);
     });
 
-    // Keyboard controls DISABLED - use toolbar buttons only
-    // $(window).keypress(function(event) {
-    //     keypress(String.fromCharCode(event.charCode));
-    // });
+    // Limited keyboard controls - only backspace for delete
+    $(window).keydown(function(event) {
+        // Backspace or Delete key
+        if (event.keyCode === 8 || event.keyCode === 46) {
+            event.preventDefault(); // Prevent browser back navigation
+            
+            if (curVertex !== undefined && curVertex >= 0) {
+                // Delete vertex
+                if (curVertex in tracks) {
+                    var oldTracks = tracks;
+                    tracks = {};
+                    _.each(oldTracks, function(track, i) {
+                        if (i != curVertex)
+                            tracks[i < curVertex ? i : i-1] = track;
+                    });
+                }
+                link.removeVertex(curVertex);
+                curVertex = undefined;
+                update();
+            } else if (curEdge !== undefined && curEdge >= 0) {
+                // Delete edge
+                link.removeEdge(curEdge);
+                curEdge = undefined;
+                update();
+            }
+        }
+    });
     
     $(window).resize(function() {
         resized = true;
