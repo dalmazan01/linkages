@@ -63,7 +63,7 @@ function display() {
     canvas.attr('height', canvas.height());
     var c = canvas[0].getContext('2d');
     c.fillStyle = 'rgb(14, 46, 78)';  // Your chosen color
-
+    c.fillRect(0, 0, canvas.width(), canvas.height());
     if (!(info & 1)) {
         c.fillStyle = colorString(0, 0, 0);
         c.font = '10pt Helvetica';
