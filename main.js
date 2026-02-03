@@ -17,6 +17,9 @@ var traceBackIndex = {}; // Store current playback position for each tracked ver
 var traceDirection = -1; // -1 for backward, 1 for forward
 var traceLoopMode = true; // true = loop/bounce, false = play once
 
+// Tool mode
+var currentTool = 'add-node'; // 'add-node', 'select', 'add-edge', etc.
+
 // Custom label names
 var nodeNames = {}; // Custom names for nodes {index: "name"}
 var edgeNames = {}; // Custom names for edges {index: "name"}
@@ -224,8 +227,17 @@ function mouseleft(x, y) {
         display();
     }
     else {
-        link.vertices.push([x, y]);
-        update();
+        // Only add node if in add-node mode
+        if (currentTool === 'add-node') {
+            link.vertices.push([x, y]);
+            update();
+        }
+        // Otherwise just deselect
+        else {
+            curVertex = undefined;
+            curEdge = undefined;
+            display();
+        }
     }
 }
 
@@ -544,12 +556,10 @@ $(function() {
     });
 
     // Toolbar button handlers
-    var toolMode = 'add-node'; // default mode
-    
     function setToolMode(mode) {
-        toolMode = mode;
+        currentTool = mode;
         // Update button active states (except presets and clear)
-        $('.toolbar-btn').not('.preset-btn, .danger').removeClass('active');
+        $('.toolbar-btn').not('.preset-btn, .danger, #btn-toggle-labels, #btn-toggle-style, #btn-trace-loop').removeClass('active');
         $('#btn-' + mode).addClass('active');
     }
     
@@ -564,7 +574,7 @@ $(function() {
     
     $('#btn-label').click(function() {
         setToolMode('label');
-        alert('Label feature coming soon!');
+        alert('Label feature: Double-click on any node or edge to rename it!');
     });
     
     $('#btn-fix').click(function() {
