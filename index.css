@@ -12,4 +12,9 @@ body {
     top: 0;
     right: 0;
     max-width: 300px;
+    color: white;  /* Makes all text white */
+}
+
+#instructions a {
+    color: #05beb5;  /* Makes links bright blue */
 }
