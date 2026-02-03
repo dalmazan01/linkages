@@ -14,6 +14,7 @@ var showLabels = true; // Toggle for showing node/edge labels
 var nodeStyle = 'filled'; // 'filled' or 'open' (hollow circles)
 var traceBackMode = false; // Whether we're in trace-back mode
 var traceBackIndex = {}; // Store current playback position for each tracked vertex
+var traceDirection = -1; // -1 for backward, 1 for forward
 
 function reset() {
     allVelocities = [];
@@ -313,27 +314,48 @@ function keypress(key) {
 
 var resized = false;
 function idle() {
-    // Trace back mode - move nodes backwards along their traces
+    // Trace back mode - move nodes along their traces (forward or backward)
     if (traceBackMode) {
         var stillPlaying = false;
+        var reachedEnd = false;
+        var reachedStart = false;
+        
         _.each(tracks, function(track, i) {
             if (track.length > 0) {
                 if (!(i in traceBackIndex)) {
-                    traceBackIndex[i] = track.length - 1; // Start at end
+                    // Initialize based on direction
+                    traceBackIndex[i] = traceDirection === -1 ? track.length - 1 : 0;
                 }
                 
-                if (traceBackIndex[i] >= 0) {
-                    link.vertices[i] = track[traceBackIndex[i]];
-                    traceBackIndex[i]--;
+                var idx = traceBackIndex[i];
+                
+                // Check bounds
+                if (idx >= 0 && idx < track.length) {
+                    link.vertices[i] = track[idx];
+                    traceBackIndex[i] += traceDirection;
                     stillPlaying = true;
                 }
+                
+                // Check if we've reached the end or start
+                if (traceDirection === -1 && idx <= 0) reachedStart = true;
+                if (traceDirection === 1 && idx >= track.length - 1) reachedEnd = true;
             }
         });
         
-        if (!stillPlaying) {
-            // Reset when finished
+        // If reached an end, reverse direction
+        if (reachedStart && traceDirection === -1) {
+            traceDirection = 1;
+            stillPlaying = true;
+        } else if (reachedEnd && traceDirection === 1) {
+            traceDirection = -1;
+            stillPlaying = true;
+        }
+        
+        // Only stop if explicitly turned off or no tracks exist
+        if (!stillPlaying && Object.keys(tracks).length === 0) {
             traceBackMode = false;
             traceBackIndex = {};
+            traceDirection = -1;
         }
         
         update();
@@ -507,26 +529,32 @@ $(function() {
         // Check if any trace has recorded points
         var hasPoints = false;
         _.each(tracks, function(track) {
-            if (track.length > 0) hasPoints = true;
+            if (track.length > 1) hasPoints = true;
         });
         
         if (!hasPoints) {
-            alert('Traces are empty. Move the linkage to record a trace path first.');
+            alert('Traces are empty or too short. Move the linkage to record a trace path first.');
             return;
         }
         
         // Toggle trace back mode
         if (traceBackMode) {
+            // Stop playback
             traceBackMode = false;
             traceBackIndex = {};
+            traceDirection = -1;
             $(this).removeClass('active');
             $(this).find('.btn-label').text('Trace Back');
+            $(this).find('.btn-icon').text('⏮');
         } else {
+            // Start playback (backward)
             traceBackMode = true;
-            traceBackIndex = {}; // Reset indices
+            traceBackIndex = {};
+            traceDirection = -1; // Start going backward
             attractor = undefined; // Turn off attractor
             $(this).addClass('active');
-            $(this).find('.btn-label').text('Stop');
+            $(this).find('.btn-label').text('Playing');
+            $(this).find('.btn-icon').text('⏸');
         }
     });
     
