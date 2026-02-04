@@ -11,7 +11,7 @@ var INFOS = 2;
 
 // Phase 1 features
 var showLabels = true; // Toggle for showing node/edge labels
-var nodeStyle = 'filled'; // 'filled' or 'open' (hollow circles)
+var nodeStyle = 'filled'; // 'filled' or 'open' (hollow circles) - global default
 var traceBackMode = false; // Whether we're in trace-back mode
 var traceBackIndex = {}; // Store current playback position for each tracked vertex
 var traceDirection = -1; // -1 for backward, 1 for forward
@@ -24,6 +24,9 @@ var currentTool = 'add-node'; // 'add-node', 'select', 'add-edge', etc.
 var nodeNames = {}; // Custom names for nodes {index: "name"}
 var edgeNames = {}; // Custom names for edges {index: "name"}
 
+// Individual node styles
+var openNodes = {}; // Track which specific nodes are open {index: true/false}
+
 function reset() {
     allVelocities = [];
     curVertex = undefined;
@@ -32,6 +35,7 @@ function reset() {
     tracks = {};
     nodeNames = {}; // Clear custom node names
     edgeNames = {}; // Clear custom edge names
+    openNodes = {}; // Clear individual node open/closed states
 }
 
 var VELOCITY_COEFF = 1;
@@ -57,8 +61,11 @@ function strokeLine(c, u, v) {
     c.stroke();
 }
 
-function fillPoint(c, v) {
-    if (nodeStyle === 'open') {
+function fillPoint(c, v, style) {
+    // Use individual node style if specified, otherwise use global nodeStyle
+    var drawStyle = style || nodeStyle;
+    
+    if (drawStyle === 'open') {
         // Draw hollow circle
         c.beginPath();
         c.arc(v[0], v[1], VERTEX_SIZE/2, 0, 2 * Math.PI);
@@ -150,15 +157,18 @@ function display() {
         var g = i in tracks ? 1 : 0;
         
         if (i == curVertex || !(view & 2)) {
+            // Determine node style (individual or global)
+            var thisNodeStyle = (i in openNodes) ? (openNodes[i] ? 'open' : 'filled') : nodeStyle;
+            
             // Draw node
             c.fillStyle = colorString(r, g, b);
             c.strokeStyle = colorString(r, g, b);
             
-            if (nodeStyle === 'open') {
+            if (thisNodeStyle === 'open') {
                 c.lineWidth = 2;
             }
             
-            fillPoint(c, v);
+            fillPoint(c, v, thisNodeStyle);
             
             // Draw fixed point indicator (pin icon)
             if (isFixed && showLabels) {
@@ -736,6 +746,22 @@ $(function() {
             $(this).find('.btn-icon').text('●');
         }
         display();
+    });
+    
+    // Toggle individual node open/closed
+    $('#btn-toggle-node-open').click(function() {
+        if (curVertex !== undefined && curVertex >= 0) {
+            // Toggle the selected node's open/closed state
+            if (curVertex in openNodes) {
+                openNodes[curVertex] = !openNodes[curVertex];
+            } else {
+                // If not set, toggle from current global default
+                openNodes[curVertex] = (nodeStyle === 'filled');
+            }
+            display();
+        } else {
+            alert('Please select a node first by clicking on it.');
+        }
     });
 
     update();
