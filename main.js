@@ -74,9 +74,10 @@ function fillPoint(c, v, style) {
         c.arc(v[0], v[1], VERTEX_SIZE/2, 0, 2 * Math.PI);
         c.stroke();
     } else {
-        // Draw filled square (original)
-        c.fillRect(v[0] - VERTEX_SIZE/2, v[1] - VERTEX_SIZE/2,
-                   VERTEX_SIZE, VERTEX_SIZE);
+        // Draw filled circle
+        c.beginPath();
+        c.arc(v[0], v[1], VERTEX_SIZE/2, 0, 2 * Math.PI);
+        c.fill();
     }
 }
 
@@ -163,9 +164,14 @@ function display() {
             // Determine node style (individual or global)
             var thisNodeStyle = (i in openNodes) ? (openNodes[i] ? 'open' : 'filled') : nodeStyle;
             
-            // Draw node
-            c.fillStyle = colorString(r, g, b);
-            c.strokeStyle = colorString(r, g, b);
+            if(i == curVertex){
+                c.fillStyle = colorString(0, 0.5, 1); // blue when selected
+                c.strokeStyle = colorString(0, 0.5, 1);
+            }
+            else{
+                c.fillStyle = colorString(1,1,1); // white for normal nodes
+                c.strokeStyle = colorString(1,1,1);
+            }
             
             if (thisNodeStyle === 'open') {
                 c.lineWidth = 2;
