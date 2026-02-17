@@ -27,6 +27,9 @@ var edgeNames = {}; // Custom names for edges {index: "name"}
 // Individual node styles
 var openNodes = {}; // Track which specific nodes are open {index: true/false}
 
+// Transparent/preview node for add-node mode
+var previewNodePosition = null;
+
 function reset() {
     allVelocities = [];
     curVertex = undefined;
@@ -193,6 +196,22 @@ function display() {
     if (attractor) {
         c.fillStyle = colorString(0.5, 0.5, 0.5)
         fillPoint(c, attractor);
+    }
+
+    // Transperent preview node when in add node mode
+    if(currentTool == 'add-node' && previewNodePosition){
+        c.save();
+        c.globalAlpha = 0.4; // Makes it transparent
+        c.fillStyle = colorString(0.7, 0.7, 1); //Color of transperent node
+        c.strokeStyle = colorString(0.7, 0.7, 1);
+
+        var thisNodeStyle = nodeStyle;
+        if (thisNodeStyle === 'open'){
+            c.lineWidth = 2;
+        }
+
+        fillPoint(c, previewNodePosition, thisNodeStyle);
+        c.restore();
     }
 }
 
@@ -477,6 +496,32 @@ $(function() {
         else
             mouseleft(x, y);
     });
+
+    // Mouse move to show the preview node in add node mode
+    $('#canvas').mousemove(function(event){
+        var offset = $(this).offset();
+        var x = event.pageX - offset.left;
+        var y = event.pageY - offset.top;
+
+        if(currentTool === 'add-node'){
+            previewNodePosition = [x,y];
+            display();
+        }
+        else{
+            if(previewNodePosition !== null){
+                previewNodePosition == null;
+                display()
+            }
+        }
+
+        // Clear preview node when mouse leaves canvas
+        $('#canvas').mouseleave(function(){
+            if(previewNodePosition !== null){
+                previewNodePosition = null;
+                display();
+            }
+        });
+    });
     
     // Double-click to rename nodes or edges
     $('#canvas').dblclick(function(event) {
@@ -571,6 +616,7 @@ $(function() {
         // Update button active states (except presets and clear)
         $('.toolbar-btn').not('.preset-btn, .danger, #btn-toggle-labels, #btn-toggle-style, #btn-trace-loop').removeClass('active');
         $('#btn-' + mode).addClass('active');
+        display();
     }
     
     // Tool buttons
