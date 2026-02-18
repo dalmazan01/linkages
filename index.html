@@ -19,101 +19,127 @@
   <body>
     <!-- Right Sidebar Toolbar -->
     <div id="toolbar">
+      <!-- Mode Toggle at top -->
       <div class="toolbar-section">
-        <h3 class="toolbar-title">Tools</h3>
-        
-        <button id="btn-add-node" class="toolbar-btn active" title="Click on canvas to add a node">
-          <span class="btn-icon">●</span>
-          <span class="btn-label">Add Node</span>
-        </button>
-        
-        <button id="btn-add-edge" class="toolbar-btn" title="Select node, then Option+Click another">
-          <span class="btn-icon">─</span>
-          <span class="btn-label">Add Edge</span>
-        </button>
-        
-        <button id="btn-label" class="toolbar-btn" title="Label nodes and edges">
-          <span class="btn-icon">🏷</span>
-          <span class="btn-label">Label</span>
-        </button>
-        
-        <button id="btn-fix" class="toolbar-btn" title="Fix selected node in place">
-          <span class="btn-icon">📍</span>
-          <span class="btn-label">Fix Node</span>
-        </button>
-        
-        <button id="btn-trace" class="toolbar-btn" title="Trace motion of selected node">
-          <span class="btn-icon">📈</span>
-          <span class="btn-label">Trace</span>
-        </button>
-        
-        <button id="btn-trace-back" class="toolbar-btn" title="Play trace backwards">
-          <span class="btn-icon">⏮</span>
-          <span class="btn-label">Trace Back</span>
-        </button>
-        
-        <button id="btn-trace-loop" class="toolbar-btn active" title="Toggle loop/play once mode">
-          <span class="btn-icon">🔁</span>
-          <span class="btn-label">Loop Mode</span>
-        </button>
-        
-        <button id="btn-attractor" class="toolbar-btn" title="Click and drag attractor">
-          <span class="btn-icon">🎯</span>
-          <span class="btn-label">Attractor</span>
-        </button>
-        
-        <button id="btn-delete" class="toolbar-btn" title="Delete selected element">
-          <span class="btn-icon">🗑</span>
-          <span class="btn-label">Delete</span>
+        <button id="btn-mode-toggle" class="toolbar-btn mode-toggle active" title="Switch between Edit and Play mode">
+          <span class="btn-icon">✏️</span>
+          <span class="btn-label">EDIT MODE</span>
         </button>
       </div>
       
       <div class="toolbar-separator-h"></div>
       
-      <div class="toolbar-section">
-        <h3 class="toolbar-title">Display</h3>
+      <!-- EDIT MODE TOOLS (visible in edit mode) -->
+      <div class="edit-mode-section">
+        <div class="toolbar-section">
+          <h3 class="toolbar-title">Edit Tools</h3>
+          
+          <button id="btn-add-node" class="toolbar-btn active" title="Click on canvas to add a node">
+            <span class="btn-icon">●</span>
+            <span class="btn-label">Add Node</span>
+          </button>
+          
+          <button id="btn-add-edge" class="toolbar-btn" title="Select node, then Option+Click another">
+            <span class="btn-icon">─</span>
+            <span class="btn-label">Add Edge</span>
+          </button>
+          
+          <button id="btn-delete" class="toolbar-btn" title="Delete selected element">
+            <span class="btn-icon">🗑</span>
+            <span class="btn-label">Delete</span>
+          </button>
+          
+          <button id="btn-label" class="toolbar-btn" title="Double-click nodes/edges to rename">
+            <span class="btn-icon">🏷</span>
+            <span class="btn-label">Label</span>
+          </button>
+        </div>
         
-        <button id="btn-toggle-labels" class="toolbar-btn active" title="Show/hide node and edge labels">
-          <span class="btn-icon">🏷</span>
-          <span class="btn-label">Show Labels</span>
-        </button>
+        <div class="toolbar-separator-h"></div>
         
-        <button id="btn-toggle-style" class="toolbar-btn" title="Toggle between filled and open nodes (global)">
-          <span class="btn-icon">⭕</span>
-          <span class="btn-label">Node Style</span>
-        </button>
+        <div class="toolbar-section">
+          <h3 class="toolbar-title">Trace Mode</h3>
+          
+          <button id="btn-trace" class="toolbar-btn" title="Trace motion of selected node">
+            <span class="btn-icon">📈</span>
+            <span class="btn-label">Trace</span>
+          </button>
+          
+          <button id="btn-trace-back" class="toolbar-btn" title="Play trace backwards">
+            <span class="btn-icon">⏮</span>
+            <span class="btn-label">Trace Back</span>
+          </button>
+          
+          <button id="btn-trace-loop" class="toolbar-btn active" title="Toggle loop/play once mode">
+            <span class="btn-icon">🔁</span>
+            <span class="btn-label">Loop Mode</span>
+          </button>
+        </div>
         
-        <button id="btn-toggle-node-open" class="toolbar-btn" title="Toggle selected node open/closed">
-          <span class="btn-icon">◐</span>
-          <span class="btn-label">Toggle Node</span>
-        </button>
+        <div class="toolbar-separator-h"></div>
+        
+        <div class="toolbar-section">
+          <h3 class="toolbar-title">Presets</h3>
+          
+          <button class="toolbar-btn preset-btn" data-preset="0">
+            <span class="btn-label">Basic</span>
+          </button>
+          
+          <button class="toolbar-btn preset-btn" data-preset="1">
+            <span class="btn-label">Watt</span>
+          </button>
+          
+          <button class="toolbar-btn preset-btn" data-preset="2">
+            <span class="btn-label">Peaucellier</span>
+          </button>
+        </div>
+        
+        <div class="toolbar-separator-h"></div>
+        
+        <div class="toolbar-section">
+          <button id="btn-clear" class="toolbar-btn danger" title="Clear everything">
+            <span class="btn-icon">⟲</span>
+            <span class="btn-label">Clear All</span>
+          </button>
+        </div>
       </div>
       
-      <div class="toolbar-separator-h"></div>
-      
-      <div class="toolbar-section">
-        <h3 class="toolbar-title">Presets</h3>
+      <!-- PLAY MODE TOOLS (visible in play mode, hidden by default) -->
+      <div class="play-mode-section" style="display: none;">
+        <div class="toolbar-section">
+          <h3 class="toolbar-title">Play Tools</h3>
+          
+          <button id="btn-attractor" class="toolbar-btn" title="Place attractor with Shift+Click">
+            <span class="btn-icon">🎯</span>
+            <span class="btn-label">Attractor</span>
+          </button>
+          
+          <button id="btn-fix" class="toolbar-btn" title="Fix selected node in place">
+            <span class="btn-icon">📍</span>
+            <span class="btn-label">Fix Node</span>
+          </button>
+          
+          <button id="btn-toggle-node-open" class="toolbar-btn" title="Toggle selected node open/closed">
+            <span class="btn-icon">◐</span>
+            <span class="btn-label">Toggle Node</span>
+          </button>
+        </div>
         
-        <button class="toolbar-btn preset-btn" data-preset="0">
-          <span class="btn-label">Basic</span>
-        </button>
+        <div class="toolbar-separator-h"></div>
         
-        <button class="toolbar-btn preset-btn" data-preset="1">
-          <span class="btn-label">Watt</span>
-        </button>
-        
-        <button class="toolbar-btn preset-btn" data-preset="2">
-          <span class="btn-label">Peaucellier</span>
-        </button>
-      </div>
-      
-      <div class="toolbar-separator-h"></div>
-      
-      <div class="toolbar-section">
-        <button id="btn-clear" class="toolbar-btn danger" title="Clear everything">
-          <span class="btn-icon">⟲</span>
-          <span class="btn-label">Clear All</span>
-        </button>
+        <div class="toolbar-section">
+          <h3 class="toolbar-title">Display</h3>
+          
+          <button id="btn-toggle-labels" class="toolbar-btn active" title="Show/hide node and edge labels">
+            <span class="btn-icon">🏷</span>
+            <span class="btn-label">Show Labels</span>
+          </button>
+          
+          <button id="btn-toggle-style" class="toolbar-btn" title="Toggle between filled and open nodes (global)">
+            <span class="btn-icon">⭕</span>
+            <span class="btn-label">Node Style</span>
+          </button>
+        </div>
       </div>
     </div>
 

@@ -19,6 +19,7 @@ var traceLoopMode = true; // true = loop/bounce, false = play once
 
 // Tool mode
 var currentTool = 'add-node'; // 'add-node', 'select', 'add-edge', etc.
+var appMode = 'edit'; // 'edit' or 'play' mode
 
 // Custom label names
 var nodeNames = {}; // Custom names for nodes {index: "name"}
@@ -26,6 +27,9 @@ var edgeNames = {}; // Custom names for edges {index: "name"}
 
 // Individual node styles
 var openNodes = {}; // Track which specific nodes are open {index: true/false}
+
+// Transparent/preview node for add-node mode
+var previewNodePosition = null;
 
 function reset() {
     allVelocities = [];
@@ -71,9 +75,10 @@ function fillPoint(c, v, style) {
         c.arc(v[0], v[1], VERTEX_SIZE/2, 0, 2 * Math.PI);
         c.stroke();
     } else {
-        // Draw filled square (original)
-        c.fillRect(v[0] - VERTEX_SIZE/2, v[1] - VERTEX_SIZE/2,
-                   VERTEX_SIZE, VERTEX_SIZE);
+        // Draw filled circle
+        c.beginPath();
+        c.arc(v[0], v[1], VERTEX_SIZE/2, 0, 2 * Math.PI);
+        c.fill();
     }
 }
 
@@ -160,9 +165,14 @@ function display() {
             // Determine node style (individual or global)
             var thisNodeStyle = (i in openNodes) ? (openNodes[i] ? 'open' : 'filled') : nodeStyle;
             
-            // Draw node
-            c.fillStyle = colorString(r, g, b);
-            c.strokeStyle = colorString(r, g, b);
+            if(i == curVertex){
+                c.fillStyle = colorString(0, 0.5, 1); // blue when selected
+                c.strokeStyle = colorString(0, 0.5, 1);
+            }
+            else{
+                c.fillStyle = colorString(1,1,1); // white for normal nodes
+                c.strokeStyle = colorString(1,1,1);
+            }
             
             if (thisNodeStyle === 'open') {
                 c.lineWidth = 2;
@@ -193,6 +203,22 @@ function display() {
     if (attractor) {
         c.fillStyle = colorString(0.5, 0.5, 0.5)
         fillPoint(c, attractor);
+    }
+
+    // Transperent preview node when in add node mode
+    if(currentTool == 'add-node' && previewNodePosition){
+        c.save();
+        c.globalAlpha = 0.4; // Makes it transparent
+        c.fillStyle = colorString(0.7, 0.7, 1); //Color of transperent node
+        c.strokeStyle = colorString(0.7, 0.7, 1);
+
+        var thisNodeStyle = nodeStyle;
+        if (thisNodeStyle === 'open'){
+            c.lineWidth = 2;
+        }
+
+        fillPoint(c, previewNodePosition, thisNodeStyle);
+        c.restore();
     }
 }
 
@@ -477,6 +503,32 @@ $(function() {
         else
             mouseleft(x, y);
     });
+
+    // Mouse move to show the preview node in add node mode
+    $('#canvas').mousemove(function(event){
+        var offset = $(this).offset();
+        var x = event.pageX - offset.left;
+        var y = event.pageY - offset.top;
+
+        if(currentTool === 'add-node'){
+            previewNodePosition = [x,y];
+            display();
+        }
+        else{
+            if(previewNodePosition !== null){
+                previewNodePosition == null;
+                display()
+            }
+        }
+
+        // Clear preview node when mouse leaves canvas
+        $('#canvas').mouseleave(function(){
+            if(previewNodePosition !== null){
+                previewNodePosition = null;
+                display();
+            }
+        });
+    });
     
     // Double-click to rename nodes or edges
     $('#canvas').dblclick(function(event) {
@@ -566,11 +618,38 @@ $(function() {
     });
 
     // Toolbar button handlers
+    
+    // Mode Toggle Button - Switch between Edit and Play mode
+    $('#btn-mode-toggle').click(function() {
+        if (appMode === 'edit') {
+            // Switch to Play mode
+            appMode = 'play';
+            $(this).find('.btn-icon').text('▶️');
+            $(this).find('.btn-label').text('PLAY MODE');
+            $('.edit-mode-section').hide();
+            $('.play-mode-section').show();
+            
+            // Disable adding nodes in play mode
+            currentTool = 'select';
+        } else {
+            // Switch to Edit mode
+            appMode = 'edit';
+            $(this).find('.btn-icon').text('✏️');
+            $(this).find('.btn-label').text('EDIT MODE');
+            $('.edit-mode-section').show();
+            $('.play-mode-section').hide();
+            
+            // Re-enable add node tool
+            currentTool = 'add-node';
+        }
+    });
+    
     function setToolMode(mode) {
         currentTool = mode;
         // Update button active states (except presets and clear)
         $('.toolbar-btn').not('.preset-btn, .danger, #btn-toggle-labels, #btn-toggle-style, #btn-trace-loop').removeClass('active');
         $('#btn-' + mode).addClass('active');
+        display();
     }
     
     // Tool buttons
