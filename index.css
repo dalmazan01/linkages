@@ -81,6 +81,25 @@ body {
     border-color: rgba(244, 67, 54, 0.6);
 }
 
+.mode-toggle {
+    font-weight: bold;
+    font-size: 15px;
+    padding: 14px 16px;
+    background: rgba(79, 195, 247, 0.2);
+    border-color: rgba(79, 195, 247, 0.5);
+}
+
+.mode-toggle.active {
+    background: rgba(79, 195, 247, 0.35);
+    border-color: #4fc3f7;
+    box-shadow: 0 0 20px rgba(79, 195, 247, 0.4);
+}
+
+.mode-toggle:hover {
+    background: rgba(79, 195, 247, 0.3);
+    border-color: #4fc3f7;
+}
+
 .btn-icon {
     font-size: 18px;
     min-width: 20px;

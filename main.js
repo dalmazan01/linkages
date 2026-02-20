@@ -19,6 +19,7 @@ var traceLoopMode = true; // true = loop/bounce, false = play once
 
 // Tool mode
 var currentTool = 'add-node'; // 'add-node', 'select', 'add-edge', etc.
+var appMode = 'edit'; // 'edit' or 'play' mode
 
 // Custom label names
 var nodeNames = {}; // Custom names for nodes {index: "name"}
@@ -617,6 +618,32 @@ $(function() {
     });
 
     // Toolbar button handlers
+    
+    // Mode Toggle Button - Switch between Edit and Play mode
+    $('#btn-mode-toggle').click(function() {
+        if (appMode === 'edit') {
+            // Switch to Play mode
+            appMode = 'play';
+            $(this).find('.btn-icon').text('▶️');
+            $(this).find('.btn-label').text('PLAY MODE');
+            $('.edit-mode-section').hide();
+            $('.play-mode-section').show();
+            
+            // Disable adding nodes in play mode
+            currentTool = 'select';
+        } else {
+            // Switch to Edit mode
+            appMode = 'edit';
+            $(this).find('.btn-icon').text('✏️');
+            $(this).find('.btn-label').text('EDIT MODE');
+            $('.edit-mode-section').show();
+            $('.play-mode-section').hide();
+            
+            // Re-enable add node tool
+            currentTool = 'add-node';
+        }
+    });
+    
     function setToolMode(mode) {
         currentTool = mode;
         // Update button active states (except presets and clear)
