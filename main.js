@@ -28,6 +28,10 @@ var edgeNames = {}; // Custom names for edges {index: "name"}
 // Individual node styles
 var openNodes = {}; // Track which specific nodes are open {index: true/false}
 
+// Drag state
+var isDragging = false;
+var dragVertex = -1;
+
 // Transparent/preview node for add-node mode
 var previewNodePosition = null;
 
@@ -492,42 +496,80 @@ function update() {
 link = PRESETS[0].copy();
 
 $(function() {
+    // Mouse down - start dragging
+    $('#canvas').mousedown(function(event) {
+        var offset = $(this).offset();
+        var x = event.pageX - offset.left;
+        var y = event.pageY - offset.top;
+        
+        // Check if we clicked on a node
+        var picked = pick(x, y);
+        if (picked.vertex >= 0) {
+            isDragging = true;
+            dragVertex = picked.vertex;
+            curVertex = picked.vertex;
+            display();
+        }
+    });
+    
+    // Mouse up - stop dragging or handle clicks
     $('#canvas').mouseup(function(event) {
         var offset = $(this).offset();
         var x = event.pageX - offset.left;
         var y = event.pageY - offset.top;
-        if (event.shiftKey)
-            mouseright(x, y);
-        else if (event.altKey)
-            mousemiddle(x, y);
-        else
-            mouseleft(x, y);
+        
+        if (isDragging) {
+            // End drag
+            isDragging = false;
+            dragVertex = -1;
+            update(); // Update rigidity after dragging
+        } else {
+            // Normal click behavior
+            if (event.shiftKey)
+                mouseright(x, y);
+            else if (event.altKey)
+                mousemiddle(x, y);
+            else
+                mouseleft(x, y);
+        }
     });
 
-    // Mouse move to show the preview node in add node mode
+    // Mouse move - drag node or show preview
     $('#canvas').mousemove(function(event){
         var offset = $(this).offset();
         var x = event.pageX - offset.left;
         var y = event.pageY - offset.top;
 
-        if(currentTool === 'add-node'){
+        // Dragging a node
+        if (isDragging && dragVertex >= 0) {
+            link.vertices[dragVertex] = [x, y];
+            display();
+        }
+        // Preview node in add-node mode
+        else if(currentTool === 'add-node'){
             previewNodePosition = [x,y];
             display();
         }
         else{
             if(previewNodePosition !== null){
-                previewNodePosition == null;
-                display()
-            }
-        }
-
-        // Clear preview node when mouse leaves canvas
-        $('#canvas').mouseleave(function(){
-            if(previewNodePosition !== null){
                 previewNodePosition = null;
                 display();
             }
-        });
+        }
+    });
+    
+    // Clear preview node when mouse leaves canvas
+    $('#canvas').mouseleave(function(){
+        if(previewNodePosition !== null){
+            previewNodePosition = null;
+            display();
+        }
+        // Also stop dragging if mouse leaves
+        if (isDragging) {
+            isDragging = false;
+            dragVertex = -1;
+            update();
+        }
     });
     
     // Double-click to rename nodes or edges
