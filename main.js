@@ -9,8 +9,12 @@ var VIEWS = 8;
 var info = 0;
 var INFOS = 2;
 
+// zoom state (simple scaling around origin)
+var scale = 1.0; // 1 = 100%
+
 // Phase 1 features
 var showLabels = true; // Toggle for showing node/edge labels
+var showEdgeLengths = false; // Toggle for showing edge lengths
 var nodeStyle = 'filled'; // 'filled' or 'open' (hollow circles) - global default
 var traceBackMode = false; // Whether we're in trace-back mode
 var traceBackIndex = {}; // Store current playback position for each tracked vertex
@@ -101,12 +105,17 @@ function display() {
     var c = canvas[0].getContext('2d');
     c.clearRect(0, 0, canvas.width, canvas.height);
 
+    // draw DOF text unscaled so it remains legible
     if (!(info & 1)) {
         c.fillStyle = colorString(0, 0, 0);
         c.font = '10pt Helvetica';
         c.fillText(allVelocities.length + ' degrees of freedom',
                    50, 50);
     }
+
+    // apply uniform scale for drawing linkage
+    c.save();
+    c.scale(scale, scale);
 
     _.each(link.edges, function(e, k) {
         if (k == curEdge) c.strokeStyle = colorString(1, 0.3, 1);
@@ -120,6 +129,16 @@ function display() {
             c.font = '10px Arial';
             var edgeLabel = edgeNames[k] || ('E' + (k + 1));
             c.fillText(edgeLabel, midpoint[0] + 5, midpoint[1] - 5);
+        }
+
+        if (showEdgeLengths) {
+            var u = link.vertices[e.i];
+            var v2 = link.vertices[e.j];
+            var mid = numeric.mul(0.5, numeric.add(u, v2));
+            var len = numeric.norm2(numeric.sub(v2, u));
+            c.fillStyle = colorString(1, 1, 0.5);
+            c.font = '10px Arial';
+            c.fillText(len.toFixed(2), mid[0] + 5, mid[1] + 10);
         }
     });
 
@@ -220,16 +239,21 @@ function display() {
         fillPoint(c, previewNodePosition, thisNodeStyle);
         c.restore();
     }
+    // undo scale transform
+    c.restore();
 }
 
 function pick(x, y) {
-    var i = link.findVertex(x, y);
-    if (i >= 0 && link.vertexDist2(x, y, i) < PICK_DIST2)
+    // adjust for simple scale
+    var sx = x / scale;
+    var sy = y / scale;
+    var i = link.findVertex(sx, sy);
+    if (i >= 0 && link.vertexDist2(sx, sy, i) < PICK_DIST2)
         return {vertex: i};
 
-    var k = link.findEdge(x,y)
-    if (k >= 0 && link.edgeDist2(x, y, k) < PICK_DIST2)
-        return {edge: k}
+    var k = link.findEdge(sx, sy);
+    if (k >= 0 && link.edgeDist2(sx, sy, k) < PICK_DIST2)
+        return {edge: k};
 
     return {};
 }
@@ -252,7 +276,10 @@ function makeAngle2(i1, j1, i2, j2) {
 }
 
 function mouseleft(x, y) {
-    var picked = pick(x, y);
+    // convert to world coordinates before use
+    var wx = x / scale;
+    var wy = y / scale;
+    var picked = pick(x, y); // pick already accounts for scale
     if (picked.vertex >= 0 || picked.edge >= 0) {
         if (picked.vertex == curVertex)
             delete picked.vertex; // clicking cur deselects
@@ -265,7 +292,7 @@ function mouseleft(x, y) {
     else {
         // Only add node if in add-node mode
         if (currentTool === 'add-node') {
-            link.vertices.push([x, y]);
+            link.vertices.push([wx, wy]);
             update();
         }
         // Otherwise just deselect
@@ -303,10 +330,13 @@ function mousemiddle(x, y) {
 }
 
 function mouseright(x, y) {
-    if (attractor && numeric.norm2Squared(numeric.sub([x, y], attractor)) < PICK_DIST2)
+    // world coordinates
+    var wx = x / scale;
+    var wy = y / scale;
+    if (attractor && numeric.norm2Squared(numeric.sub([wx, wy], attractor)) < PICK_DIST2)
         attractor = undefined;
     else
-        attractor = [x, y];
+        attractor = [wx, wy];
     display();
 }
 
@@ -359,6 +389,11 @@ function keypress(key) {
 
     else if (key == 'i') {
         info = (info + 1) % INFOS;
+        display();
+    }
+
+    else if (key == 'l') { // toggle edge length display
+        showEdgeLengths = !showEdgeLengths;
         display();
     }
 
@@ -532,9 +567,11 @@ $(function() {
     
     // Double-click to rename nodes or edges
     $('#canvas').dblclick(function(event) {
-        var offset = $(this).offset();
-        var x = event.pageX - offset.left;
-        var y = event.pageY - offset.top;
+        var rect = this.getBoundingClientRect();
+        var x = event.clientX - rect.left;
+        var y = event.clientY - rect.top;
+        var w = screenToWorld(x, y);
+        x = w[0]; y = w[1];
         
         // Check if clicked near a node
         var nodeIndex = -1;
@@ -585,6 +622,7 @@ $(function() {
         }
     });
 
+
     // Limited keyboard controls - only backspace for delete
     $(window).keydown(function(event) {
         // Backspace or Delete key
@@ -619,6 +657,16 @@ $(function() {
 
     // Toolbar button handlers
     
+    // Zoom buttons (scale around center of canvas)
+    $('#btn-zoom-in').click(function() {
+        scale = Math.min(10, scale * 1.2);
+        display();
+    });
+    $('#btn-zoom-out').click(function() {
+        scale = Math.max(0.1, scale / 1.2);
+        display();
+    });
+
     // Mode Toggle Button - Switch between Edit and Play mode
     $('#btn-mode-toggle').click(function() {
         if (appMode === 'edit') {
@@ -811,6 +859,20 @@ $(function() {
         }
         display();
     });
+
+    // edge length toggle
+    $('#btn-toggle-lengths').click(function() {
+        showEdgeLengths = !showEdgeLengths;
+        if (showEdgeLengths) {
+            $(this).addClass('active');
+            $(this).find('.btn-label').text('Hide Lengths');
+        } else {
+            $(this).removeClass('active');
+            $(this).find('.btn-label').text('Show Lengths');
+        }
+        display();
+    });
+
     
     $('#btn-toggle-style').click(function() {
         if (nodeStyle === 'filled') {

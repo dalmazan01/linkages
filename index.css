@@ -132,6 +132,7 @@ body {
     width: calc(100% - 200px);
     height: 100%;
     margin: 0;
+    touch-action: none; /* allow custom pan/zoom gestures */
 }
 
 /* Scrollbar styling for toolbar */
