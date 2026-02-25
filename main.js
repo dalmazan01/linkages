@@ -54,7 +54,7 @@ var VELOCITY_COEFF = 1;
 var VELOCITY_MAG = 1;
 
 var VERTEX_SIZE = 10;
-var LINE_WIDTH = 3;
+var LINE_WIDTH = 5;
 var ANGLE_DIST = 25;
 var VECTOR_LENGTH = 50;
 var PICK_DIST2 = 100;
