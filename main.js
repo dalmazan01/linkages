@@ -36,8 +36,76 @@ var openNodes = {}; // Track which specific nodes are open {index: true/false}
 var isDragging = false;
 var dragVertex = -1;
 
-// Transparent/preview node for add-node mode
+// Transparent/preview node for addnode mode
 var previewNodePosition = null;
+
+// Undo/Redo history stack
+var undoStack = [];
+var redoStack = [];
+var MAX_UNDO = 50;
+
+function makeSnapshot() {
+    return {
+        vertices  : link.vertices.map(function(v) { return [v[0], v[1]]; }),
+        fixed     : link.fixed.slice(),
+        edges     : link.edges.map(function(e) { return {i: e.i, j: e.j}; }),
+        angles    : link.angles.map(function(a) { return {i: a.i, j: a.j, k: a.k}; }),
+        nodeNames : $.extend({}, nodeNames),
+        edgeNames : $.extend({}, edgeNames),
+        openNodes : $.extend({}, openNodes)
+    };
+}
+
+function restoreSnapshot(snapshot) {
+    link.vertices = snapshot.vertices;
+    link.fixed    = snapshot.fixed;
+    link.edges    = snapshot.edges;
+    link.angles   = snapshot.angles;
+    nodeNames     = snapshot.nodeNames;
+    edgeNames     = snapshot.edgeNames;
+    openNodes     = snapshot.openNodes;
+    curVertex = undefined;
+    curEdge   = undefined;
+}
+
+function saveHistory() {
+    undoStack.push(makeSnapshot());
+    if (undoStack.length > MAX_UNDO) undoStack.shift();
+    // any new action clears the redo stack
+    redoStack = [];
+    refreshHistoryButtons();
+}
+
+function undo() {
+    if (undoStack.length === 0) return;
+    // save current state to redo stack before going back
+    redoStack.push(makeSnapshot());
+    restoreSnapshot(undoStack.pop());
+    refreshHistoryButtons();
+    update();
+}
+
+function redo() {
+    if (redoStack.length === 0) return;
+    // save current state to undo stack before going forward
+    undoStack.push(makeSnapshot());
+    restoreSnapshot(redoStack.pop());
+    refreshHistoryButtons();
+    update();
+}
+
+function refreshHistoryButtons() {
+    if (undoStack.length === 0) {
+        $('#btn-undo').prop('disabled', true).css('opacity', '0.4');
+    } else {
+        $('#btn-undo').prop('disabled', false).css('opacity', '1');
+    }
+    if (redoStack.length === 0) {
+        $('#btn-redo').prop('disabled', true).css('opacity', '0.4');
+    } else {
+        $('#btn-redo').prop('disabled', false).css('opacity', '1');
+    }
+}
 
 function reset() {
     allVelocities = [];
@@ -296,6 +364,7 @@ function mouseleft(x, y) {
     else {
         // Only add node if in add-node mode
         if (currentTool === 'add-node') {
+            saveHistory();
             link.vertices.push([wx, wy]);
             update();
         }
@@ -315,6 +384,7 @@ function mousemiddle(x, y) {
     if (i >= 0 && curVertex >= 0 && i != curVertex) {
         var edge = makeEdge(i, curVertex);
         var k = link.getEdge(edge);
+        saveHistory();
         if (k >= 0) link.removeEdge(k);
         else link.edges.push(edge);
         update();
@@ -326,6 +396,7 @@ function mousemiddle(x, y) {
         var angle = makeAngle2(ij.i, ij.j, jk.i, jk.j);
         if (angle) {
             var a = link.getAngle(angle);
+            saveHistory();
             if (a >= 0) link.angles.slice(a, 1);
             else link.angles.push(angle);
             update();
@@ -673,6 +744,7 @@ $(function() {
             
             if (curVertex !== undefined && curVertex >= 0) {
                 // Delete vertex
+                saveHistory();
                 if (curVertex in tracks) {
                     var oldTracks = tracks;
                     tracks = {};
@@ -686,10 +758,23 @@ $(function() {
                 update();
             } else if (curEdge !== undefined && curEdge >= 0) {
                 // Delete edge
+                saveHistory();
                 link.removeEdge(curEdge);
                 curEdge = undefined;
                 update();
             }
+        }
+
+        // Ctrl+Z / Cmd+Z — undo
+        if ((event.ctrlKey || event.metaKey) && event.key === 'z') {
+            event.preventDefault();
+            undo();
+        }
+
+        // Ctrl+Y / Cmd+Y  or  Ctrl+Shift+Z / Cmd+Shift+Z — redo
+        if ((event.ctrlKey || event.metaKey) && (event.key === 'y' || (event.shiftKey && event.key === 'z'))) {
+            event.preventDefault();
+            redo();
         }
     });
     
@@ -736,11 +821,21 @@ $(function() {
     
     function setToolMode(mode) {
         currentTool = mode;
-        // Update button active states (except presets and clear)
-        $('.toolbar-btn').not('.preset-btn, .danger, #btn-toggle-labels, #btn-toggle-style, #btn-trace-loop').removeClass('active');
+        // Update button active states (except presets, clear, undo, and redo)
+        $('.toolbar-btn').not('.preset-btn, .danger, #btn-toggle-labels, #btn-toggle-style, #btn-trace-loop, #btn-undo, #btn-redo').removeClass('active');
         $('#btn-' + mode).addClass('active');
         display();
     }
+
+    // Undo button
+    $('#btn-undo').click(function() {
+        undo();
+    });
+
+    // Redo button
+    $('#btn-redo').click(function() {
+        redo();
+    });
     
     // Tool buttons
     $('#btn-add-node').click(function() {
@@ -760,6 +855,7 @@ $(function() {
         if (curVertex !== undefined && curVertex >= 0) {
             // Toggle fix state
             var i = link.fixed.indexOf(curVertex);
+            saveHistory();
             if (i >= 0) {
                 link.fixed.splice(i, 1);
             } else {
@@ -850,6 +946,7 @@ $(function() {
     $('#btn-delete').click(function() {
         if (curVertex !== undefined && curVertex >= 0) {
             // Delete vertex
+            saveHistory();
             if (curVertex in tracks) {
                 var oldTracks = tracks;
                 tracks = {};
@@ -863,16 +960,17 @@ $(function() {
             update();
         } else if (curEdge !== undefined && curEdge >= 0) {
             // Delete edge
+            saveHistory();
             link.removeEdge(curEdge);
             curEdge = undefined;
             update();
-        } else {
-            alert('Please select a node or edge first.');
         }
+        // silently do nothing if nothing selected
     });
     
     $('#btn-clear').click(function() {
         if (confirm('Clear everything? This cannot be undone.')) {
+            saveHistory();
             reset();
             link.clear();
             update();
@@ -883,6 +981,7 @@ $(function() {
     $('.preset-btn').click(function() {
         var presetIndex = parseInt($(this).attr('data-preset'));
         if (presetIndex >= 0 && presetIndex < PRESETS.length) {
+            saveHistory();
             reset();
             link = PRESETS[presetIndex].copy();
             update();
