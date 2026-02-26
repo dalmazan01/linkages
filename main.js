@@ -12,6 +12,13 @@ var INFOS = 2;
 // zoom state (simple scaling around origin)
 var scale = 1.0; // 1 = 100%
 
+
+function screenToWorld(x, y) {
+    // Convert canvas (screen) coords to linkage (world) coords.
+    // We only support uniform scaling in this project.
+    return [x / scale, y / scale];
+}
+
 // Phase 1 features
 var showLabels = true; // Toggle for showing node/edge labels
 var showEdgeLengths = false; // Toggle for showing edge lengths
@@ -351,7 +358,8 @@ function mouseleft(x, y) {
     // convert to world coordinates before use
     var wx = x / scale;
     var wy = y / scale;
-    var picked = pick(x, y); // pick already accounts for scale
+    var w = screenToWorld(x, y);
+        var picked = pick(w[0], w[1]); // pick already accounts for scale
     if (picked.vertex >= 0 || picked.edge >= 0) {
         if (picked.vertex == curVertex)
             delete picked.vertex; // clicking cur deselects
@@ -378,7 +386,8 @@ function mouseleft(x, y) {
 }
 
 function mousemiddle(x, y) {
-    var picked = pick(x, y);
+    var w = screenToWorld(x, y);
+        var picked = pick(w[0], w[1]);
     var i = picked.vertex, k = picked.edge;
 
     if (i >= 0 && curVertex >= 0 && i != curVertex) {
@@ -397,7 +406,7 @@ function mousemiddle(x, y) {
         if (angle) {
             var a = link.getAngle(angle);
             saveHistory();
-            if (a >= 0) link.angles.slice(a, 1);
+            if (a >= 0) link.angles.splice(a, 1);
             else link.angles.push(angle);
             update();
         }
@@ -607,18 +616,35 @@ $(function() {
         var offset = $(this).offset();
         var x = event.pageX - offset.left;
         var y = event.pageY - offset.top;
-        
-        // Check if we clicked on a node
-        var picked = pick(x, y);
-        if (picked.vertex >= 0) {
-            isDragging = true;
-            dragVertex = picked.vertex;
-            curVertex = picked.vertex;
-            display();
+
+        // Start constrained drag ONLY in select/play mode.
+        // Other tools (add-node/add-edge/delete/label) rely on mouseup handlers.
+        if (currentTool === 'select' || appMode === 'play') {
+            var picked = pick(x, y); // pick() already accounts for scale
+            if (picked.vertex >= 0) {
+                // Don't drag fixed vertices
+                if (link.fixed.indexOf(picked.vertex) >= 0) {
+                    curVertex = picked.vertex;
+                    curEdge = undefined;
+                    display();
+                    return;
+                }
+                isDragging = true;
+                dragVertex = picked.vertex;
+                curVertex = picked.vertex;
+
+                // Attractor lives in world coordinates (same space as link.vertices)
+                attractor = [x / scale, y / scale];
+                display();
+            } else if (picked.edge >= 0) {
+                curEdge = picked.edge;
+                curVertex = undefined;
+                display();
+            }
         }
     });
-    
-    // Mouse up - stop dragging or handle clicks
+
+// Mouse up - stop dragging or handle clicks
     $('#canvas').mouseup(function(event) {
         var offset = $(this).offset();
         var x = event.pageX - offset.left;
@@ -628,9 +654,10 @@ $(function() {
             // End drag
             isDragging = false;
             dragVertex = -1;
-            update(); // Update rigidity after dragging
+            attractor = undefined;
+            update(); // recompute DOF and redraw
         } else {
-            // Normal click behavior
+            // Normal click behavior (mouseleft/middle/right handle scale themselves)
             if (event.shiftKey)
                 mouseright(x, y);
             else if (event.altKey)
@@ -646,14 +673,16 @@ $(function() {
         var x = event.pageX - offset.left;
         var y = event.pageY - offset.top;
 
-        // Dragging a node
+        // Dragging a node: set an attractor at the cursor and let the
+        // rigidity projection in idle() move the linkage along allowed DOF.
         if (isDragging && dragVertex >= 0) {
-            link.vertices[dragVertex] = [x, y];
+            attractor = [x / scale, y / scale];
+            curVertex = dragVertex;
             display();
         }
         // Preview node in add-node mode
         else if(currentTool === 'add-node'){
-            previewNodePosition = [x,y];
+            previewNodePosition = [x / scale, y / scale];
             display();
         }
         else{
@@ -674,6 +703,7 @@ $(function() {
         if (isDragging) {
             isDragging = false;
             dragVertex = -1;
+            attractor = undefined;
             update();
         }
     });
