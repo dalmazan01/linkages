@@ -9,19 +9,127 @@ var VIEWS = 8;
 var info = 0;
 var INFOS = 2;
 
+// zoom state (simple scaling around origin)
+var scale = 1.0; // 1 = 100%
+
+
+function screenToWorld(x, y) {
+    // Convert canvas (screen) coords to linkage (world) coords.
+    // We only support uniform scaling in this project.
+    return [x / scale, y / scale];
+}
+
+// Phase 1 features
+var showLabels = true; // Toggle for showing node/edge labels
+var showEdgeLengths = false; // Toggle for showing edge lengths
+var nodeStyle = 'filled'; // 'filled' or 'open' (hollow circles) - global default
+var traceBackMode = false; // Whether we're in trace-back mode
+var traceBackIndex = {}; // Store current playback position for each tracked vertex
+var traceDirection = -1; // -1 for backward, 1 for forward
+var traceLoopMode = true; // true = loop/bounce, false = play once
+
+// Tool mode
+var currentTool = 'add-node'; // 'add-node', 'select', 'add-edge', etc.
+var appMode = 'edit'; // 'edit' or 'play' mode
+
+// Custom label names
+var nodeNames = {}; // Custom names for nodes {index: "name"}
+var edgeNames = {}; // Custom names for edges {index: "name"}
+
+// Individual node styles
+var openNodes = {}; // Track which specific nodes are open {index: true/false}
+
+// Drag state
+var isDragging = false;
+var dragVertex = -1;
+
+// Transparent/preview node for addnode mode
+var previewNodePosition = null;
+
+// Undo/Redo history stack
+var undoStack = [];
+var redoStack = [];
+var MAX_UNDO = 50;
+
+function makeSnapshot() {
+    return {
+        vertices  : link.vertices.map(function(v) { return [v[0], v[1]]; }),
+        fixed     : link.fixed.slice(),
+        edges     : link.edges.map(function(e) { return {i: e.i, j: e.j}; }),
+        angles    : link.angles.map(function(a) { return {i: a.i, j: a.j, k: a.k}; }),
+        nodeNames : $.extend({}, nodeNames),
+        edgeNames : $.extend({}, edgeNames),
+        openNodes : $.extend({}, openNodes)
+    };
+}
+
+function restoreSnapshot(snapshot) {
+    link.vertices = snapshot.vertices;
+    link.fixed    = snapshot.fixed;
+    link.edges    = snapshot.edges;
+    link.angles   = snapshot.angles;
+    nodeNames     = snapshot.nodeNames;
+    edgeNames     = snapshot.edgeNames;
+    openNodes     = snapshot.openNodes;
+    curVertex = undefined;
+    curEdge   = undefined;
+}
+
+function saveHistory() {
+    undoStack.push(makeSnapshot());
+    if (undoStack.length > MAX_UNDO) undoStack.shift();
+    // any new action clears the redo stack
+    redoStack = [];
+    refreshHistoryButtons();
+}
+
+function undo() {
+    if (undoStack.length === 0) return;
+    // save current state to redo stack before going back
+    redoStack.push(makeSnapshot());
+    restoreSnapshot(undoStack.pop());
+    refreshHistoryButtons();
+    update();
+}
+
+function redo() {
+    if (redoStack.length === 0) return;
+    // save current state to undo stack before going forward
+    undoStack.push(makeSnapshot());
+    restoreSnapshot(redoStack.pop());
+    refreshHistoryButtons();
+    update();
+}
+
+function refreshHistoryButtons() {
+    if (undoStack.length === 0) {
+        $('#btn-undo').prop('disabled', true).css('opacity', '0.4');
+    } else {
+        $('#btn-undo').prop('disabled', false).css('opacity', '1');
+    }
+    if (redoStack.length === 0) {
+        $('#btn-redo').prop('disabled', true).css('opacity', '0.4');
+    } else {
+        $('#btn-redo').prop('disabled', false).css('opacity', '1');
+    }
+}
+
 function reset() {
     allVelocities = [];
     curVertex = undefined;
     curEdge = undefined;
     attractor = undefined;
     tracks = {};
+    nodeNames = {}; // Clear custom node names
+    edgeNames = {}; // Clear custom edge names
+    openNodes = {}; // Clear individual node open/closed states
 }
 
 var VELOCITY_COEFF = 1;
 var VELOCITY_MAG = 1;
 
 var VERTEX_SIZE = 10;
-var LINE_WIDTH = 3;
+var LINE_WIDTH = 4;
 var ANGLE_DIST = 25;
 var VECTOR_LENGTH = 50;
 var PICK_DIST2 = 100;
@@ -40,9 +148,21 @@ function strokeLine(c, u, v) {
     c.stroke();
 }
 
-function fillPoint(c, v) {
-    c.fillRect(v[0] - VERTEX_SIZE/2, v[1] - VERTEX_SIZE/2,
-               VERTEX_SIZE, VERTEX_SIZE);
+function fillPoint(c, v, style) {
+    // Use individual node style if specified, otherwise use global nodeStyle
+    var drawStyle = style || nodeStyle;
+    
+    if (drawStyle === 'open') {
+        // Draw hollow circle
+        c.beginPath();
+        c.arc(v[0], v[1], VERTEX_SIZE/2, 0, 2 * Math.PI);
+        c.stroke();
+    } else {
+        // Draw filled circle
+        c.beginPath();
+        c.arc(v[0], v[1], VERTEX_SIZE/2, 0, 2 * Math.PI);
+        c.fill();
+    }
 }
 
 function colorComponent(x) {
@@ -64,6 +184,7 @@ function display() {
     var c = canvas[0].getContext('2d');
     c.clearRect(0, 0, canvas.width, canvas.height);
 
+    // draw DOF text unscaled so it remains legible
     if (!(info & 1)) {
         c.fillStyle = colorString(0, 0, 0);
         c.font = '10pt Helvetica';
@@ -71,10 +192,33 @@ function display() {
                    50, 50);
     }
 
+    // apply uniform scale for drawing linkage
+    c.save();
+    c.scale(scale, scale);
+
     _.each(link.edges, function(e, k) {
         if (k == curEdge) c.strokeStyle = colorString(1, 0.3, 1);
         else c.strokeStyle = colorString(1, 0.3, 0);
         strokeLine(c, link.vertices[e.i], link.vertices[e.j]);
+        
+        // Draw edge label (use custom name if available)
+        if (showLabels) {
+            var midpoint = numeric.mul(0.5, numeric.add(link.vertices[e.i], link.vertices[e.j]));
+            c.fillStyle = colorString(1, 1, 0.5); // Light yellow for edge labels
+            c.font = '10px Arial';
+            var edgeLabel = edgeNames[k] || ('E' + (k + 1));
+            c.fillText(edgeLabel, midpoint[0] + 5, midpoint[1] - 5);
+        }
+
+        if (showEdgeLengths) {
+            var u = link.vertices[e.i];
+            var v2 = link.vertices[e.j];
+            var mid = numeric.mul(0.5, numeric.add(u, v2));
+            var len = numeric.norm2(numeric.sub(v2, u));
+            c.fillStyle = colorString(1, 1, 0.5);
+            c.font = '10px Arial';
+            c.fillText(len.toFixed(2), mid[0] + 5, mid[1] + 10);
+        }
     });
 
     if (!(view & 4)) {
@@ -111,11 +255,46 @@ function display() {
 
     _.each(link.vertices, function(v, i) {
         var b = i == curVertex ? 1 : 0;
-        var r = link.fixed.indexOf(i) != -1 ? 1 : 0;
+        var isFixed = link.fixed.indexOf(i) != -1;
+        var r = isFixed ? 1 : 0;
         var g = i in tracks ? 1 : 0;
+        
         if (i == curVertex || !(view & 2)) {
-            c.fillStyle = colorString(r, g, b);
-            fillPoint(c, v);
+            // Determine node style (individual or global)
+            var thisNodeStyle = (i in openNodes) ? (openNodes[i] ? 'open' : 'filled') : nodeStyle;
+            
+            if(i == curVertex){
+                c.fillStyle = colorString(0, 0.5, 1); // blue when selected
+                c.strokeStyle = colorString(0, 0.5, 1);
+            }
+            else{
+                c.fillStyle = colorString(1,1,1); // white for normal nodes
+                c.strokeStyle = colorString(1,1,1);
+            }
+            
+            if (thisNodeStyle === 'open') {
+                c.lineWidth = 2;
+            }
+            
+            fillPoint(c, v, thisNodeStyle);
+            
+            // Draw fixed point indicator (pin icon)
+            if (isFixed && showLabels) {
+                c.fillStyle = colorString(1, 0.2, 0.2); // Red for fixed
+                c.font = 'bold 16px Arial';
+                c.fillText('📍', v[0] + 8, v[1] - 8);
+            }
+            
+            // Draw node label (use custom name if available)
+            if (showLabels) {
+                c.fillStyle = colorString(1, 1, 1); // White labels
+                c.font = 'bold 12px Arial';
+                var label = nodeNames[i] || String.fromCharCode(65 + i); // Custom or A, B, C, etc.
+                c.fillText(label, v[0] - 15, v[1] - 15);
+                
+                // Store label position for click detection (invisible)
+                // We'll handle this in mouse events
+            }
         }
     });
 
@@ -123,16 +302,37 @@ function display() {
         c.fillStyle = colorString(0.5, 0.5, 0.5)
         fillPoint(c, attractor);
     }
+
+    // Transperent preview node when in add node mode
+    if(currentTool == 'add-node' && previewNodePosition){
+        c.save();
+        c.globalAlpha = 0.4; // Makes it transparent
+        c.fillStyle = colorString(0.7, 0.7, 1); //Color of transperent node
+        c.strokeStyle = colorString(0.7, 0.7, 1);
+
+        var thisNodeStyle = nodeStyle;
+        if (thisNodeStyle === 'open'){
+            c.lineWidth = 2;
+        }
+
+        fillPoint(c, previewNodePosition, thisNodeStyle);
+        c.restore();
+    }
+    // undo scale transform
+    c.restore();
 }
 
 function pick(x, y) {
-    var i = link.findVertex(x, y);
-    if (i >= 0 && link.vertexDist2(x, y, i) < PICK_DIST2)
+    // adjust for simple scale
+    var sx = x / scale;
+    var sy = y / scale;
+    var i = link.findVertex(sx, sy);
+    if (i >= 0 && link.vertexDist2(sx, sy, i) < PICK_DIST2)
         return {vertex: i};
 
-    var k = link.findEdge(x,y)
-    if (k >= 0 && link.edgeDist2(x, y, k) < PICK_DIST2)
-        return {edge: k}
+    var k = link.findEdge(sx, sy);
+    if (k >= 0 && link.edgeDist2(sx, sy, k) < PICK_DIST2)
+        return {edge: k};
 
     return {};
 }
@@ -155,7 +355,11 @@ function makeAngle2(i1, j1, i2, j2) {
 }
 
 function mouseleft(x, y) {
-    var picked = pick(x, y);
+    // convert to world coordinates before use
+    var wx = x / scale;
+    var wy = y / scale;
+    var w = screenToWorld(x, y);
+        var picked = pick(w[0], w[1]); // pick already accounts for scale
     if (picked.vertex >= 0 || picked.edge >= 0) {
         if (picked.vertex == curVertex)
             delete picked.vertex; // clicking cur deselects
@@ -166,18 +370,30 @@ function mouseleft(x, y) {
         display();
     }
     else {
-        link.vertices.push([x, y]);
-        update();
+        // Only add node if in add-node mode
+        if (currentTool === 'add-node') {
+            saveHistory();
+            link.vertices.push([wx, wy]);
+            update();
+        }
+        // Otherwise just deselect
+        else {
+            curVertex = undefined;
+            curEdge = undefined;
+            display();
+        }
     }
 }
 
 function mousemiddle(x, y) {
-    var picked = pick(x, y);
+    var w = screenToWorld(x, y);
+        var picked = pick(w[0], w[1]);
     var i = picked.vertex, k = picked.edge;
 
     if (i >= 0 && curVertex >= 0 && i != curVertex) {
         var edge = makeEdge(i, curVertex);
         var k = link.getEdge(edge);
+        saveHistory();
         if (k >= 0) link.removeEdge(k);
         else link.edges.push(edge);
         update();
@@ -189,7 +405,8 @@ function mousemiddle(x, y) {
         var angle = makeAngle2(ij.i, ij.j, jk.i, jk.j);
         if (angle) {
             var a = link.getAngle(angle);
-            if (a >= 0) link.angles.slice(a, 1);
+            saveHistory();
+            if (a >= 0) link.angles.splice(a, 1);
             else link.angles.push(angle);
             update();
         }
@@ -197,10 +414,13 @@ function mousemiddle(x, y) {
 }
 
 function mouseright(x, y) {
-    if (attractor && numeric.norm2Squared(numeric.sub([x, y], attractor)) < PICK_DIST2)
+    // world coordinates
+    var wx = x / scale;
+    var wy = y / scale;
+    if (attractor && numeric.norm2Squared(numeric.sub([wx, wy], attractor)) < PICK_DIST2)
         attractor = undefined;
     else
-        attractor = [x, y];
+        attractor = [wx, wy];
     display();
 }
 
@@ -256,6 +476,11 @@ function keypress(key) {
         display();
     }
 
+    else if (key == 'l') { // toggle edge length display
+        showEdgeLengths = !showEdgeLengths;
+        display();
+    }
+
     else if ((key - '1') in PRESETS) {
         reset();
         link = PRESETS[key - '1'].copy();
@@ -266,7 +491,68 @@ function keypress(key) {
 
 var resized = false;
 function idle() {
-    if (attractor && curVertex >= 0 && allVelocities.length && link.fixed.indexOf(curVertex) < 0) {
+    // Trace back mode - move nodes along their traces (forward or backward)
+    if (traceBackMode) {
+        var stillPlaying = false;
+        var reachedEnd = false;
+        var reachedStart = false;
+        
+        _.each(tracks, function(track, i) {
+            if (track.length > 0) {
+                if (!(i in traceBackIndex)) {
+                    // Initialize based on direction
+                    traceBackIndex[i] = traceDirection === -1 ? track.length - 1 : 0;
+                }
+                
+                var idx = traceBackIndex[i];
+                
+                // Check bounds
+                if (idx >= 0 && idx < track.length) {
+                    link.vertices[i] = track[idx];
+                    traceBackIndex[i] += traceDirection;
+                    stillPlaying = true;
+                }
+                
+                // Check if we've reached the end or start
+                if (traceDirection === -1 && idx <= 0) reachedStart = true;
+                if (traceDirection === 1 && idx >= track.length - 1) reachedEnd = true;
+            }
+        });
+        
+        // Handle end conditions based on loop mode
+        if (traceLoopMode) {
+            // Loop mode: bounce back and forth
+            if (reachedStart && traceDirection === -1) {
+                traceDirection = 1;
+                stillPlaying = true;
+            } else if (reachedEnd && traceDirection === 1) {
+                traceDirection = -1;
+                stillPlaying = true;
+            }
+        } else {
+            // Play once mode: stop when reaching the start
+            if (reachedStart && traceDirection === -1) {
+                traceBackMode = false;
+                traceBackIndex = {};
+                traceDirection = -1;
+                $('#btn-trace-back').removeClass('active');
+                $('#btn-trace-back').find('.btn-label').text('Trace Back');
+                $('#btn-trace-back').find('.btn-icon').text('⏮');
+                stillPlaying = false;
+            }
+        }
+        
+        // Only stop if explicitly turned off or no tracks exist
+        if (!stillPlaying && Object.keys(tracks).length === 0) {
+            traceBackMode = false;
+            traceBackIndex = {};
+            traceDirection = -1;
+        }
+        
+        update();
+    }
+    // Normal attractor mode
+    else if (attractor && curVertex >= 0 && allVelocities.length && link.fixed.indexOf(curVertex) < 0) {
         var num = numeric;
         var velocity0 = num.sub(attractor, link.vertices[curVertex]);
 
@@ -325,22 +611,469 @@ function update() {
 link = PRESETS[0].copy();
 
 $(function() {
+    // Mouse down - start dragging
+    $('#canvas').mousedown(function(event) {
+        var offset = $(this).offset();
+        var x = event.pageX - offset.left;
+        var y = event.pageY - offset.top;
+
+        // Start constrained drag ONLY in select/play mode.
+        // Other tools (add-node/add-edge/delete/label) rely on mouseup handlers.
+        if (currentTool === 'select' || appMode === 'play') {
+            var picked = pick(x, y); // pick() already accounts for scale
+            if (picked.vertex >= 0) {
+                // Don't drag fixed vertices
+                if (link.fixed.indexOf(picked.vertex) >= 0) {
+                    curVertex = picked.vertex;
+                    curEdge = undefined;
+                    display();
+                    return;
+                }
+                isDragging = true;
+                dragVertex = picked.vertex;
+                curVertex = picked.vertex;
+
+                // Attractor lives in world coordinates (same space as link.vertices)
+                attractor = [x / scale, y / scale];
+                display();
+            } else if (picked.edge >= 0) {
+                curEdge = picked.edge;
+                curVertex = undefined;
+                display();
+            }
+        }
+    });
+
+// Mouse up - stop dragging or handle clicks
     $('#canvas').mouseup(function(event) {
         var offset = $(this).offset();
         var x = event.pageX - offset.left;
         var y = event.pageY - offset.top;
-        if (event.shiftKey)
-            mouseright(x, y);
-        else if (event.altKey)
-            mousemiddle(x, y);
-        else
-            mouseleft(x, y);
+        
+        if (isDragging) {
+            // End drag
+            isDragging = false;
+            dragVertex = -1;
+            attractor = undefined;
+            update(); // recompute DOF and redraw
+        } else {
+            // Normal click behavior (mouseleft/middle/right handle scale themselves)
+            if (event.shiftKey)
+                mouseright(x, y);
+            else if (event.altKey)
+                mousemiddle(x, y);
+            else
+                mouseleft(x, y);
+        }
     });
 
-    $(window).keypress(function(event) {
-        keypress(String.fromCharCode(event.charCode));
-    }).resize(function() {
+    // Mouse move - drag node or show preview
+    $('#canvas').mousemove(function(event){
+        var offset = $(this).offset();
+        var x = event.pageX - offset.left;
+        var y = event.pageY - offset.top;
+
+        // Dragging a node: set an attractor at the cursor and let the
+        // rigidity projection in idle() move the linkage along allowed DOF.
+        if (isDragging && dragVertex >= 0) {
+            attractor = [x / scale, y / scale];
+            curVertex = dragVertex;
+            display();
+        }
+        // Preview node in add-node mode
+        else if(currentTool === 'add-node'){
+            previewNodePosition = [x / scale, y / scale];
+            display();
+        }
+        else{
+            if(previewNodePosition !== null){
+                previewNodePosition = null;
+                display();
+            }
+        }
+    });
+    
+    // Clear preview node when mouse leaves canvas
+    $('#canvas').mouseleave(function(){
+        if(previewNodePosition !== null){
+            previewNodePosition = null;
+            display();
+        }
+        // Also stop dragging if mouse leaves
+        if (isDragging) {
+            isDragging = false;
+            dragVertex = -1;
+            attractor = undefined;
+            update();
+        }
+    });
+    
+    // Double-click to rename nodes or edges
+    $('#canvas').dblclick(function(event) {
+        var rect = this.getBoundingClientRect();
+        var x = event.clientX - rect.left;
+        var y = event.clientY - rect.top;
+        var w = screenToWorld(x, y);
+        x = w[0]; y = w[1];
+        
+        // Check if clicked near a node
+        var nodeIndex = -1;
+        var minDist = PICK_DIST2;
+        _.each(link.vertices, function(v, i) {
+            var dist2 = link.vertexDist2(x, y, i);
+            if (dist2 < minDist) {
+                minDist = dist2;
+                nodeIndex = i;
+            }
+        });
+        
+        if (nodeIndex >= 0) {
+            // Rename node
+            var currentName = nodeNames[nodeIndex] || String.fromCharCode(65 + nodeIndex);
+            var newName = prompt('Enter new name for node:', currentName);
+            if (newName !== null && newName.trim() !== '') {
+                nodeNames[nodeIndex] = newName.trim();
+                display();
+            }
+            return;
+        }
+        
+        // Check if clicked near an edge
+        var edgeIndex = -1;
+        var minEdgeDist = 15; // pixels
+        _.each(link.edges, function(e, k) {
+            var v1 = link.vertices[e.i];
+            var v2 = link.vertices[e.j];
+            var midpoint = numeric.mul(0.5, numeric.add(v1, v2));
+            var dx = x - midpoint[0];
+            var dy = y - midpoint[1];
+            var dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < minEdgeDist) {
+                minEdgeDist = dist;
+                edgeIndex = k;
+            }
+        });
+        
+        if (edgeIndex >= 0) {
+            // Rename edge
+            var currentEdgeName = edgeNames[edgeIndex] || ('E' + (edgeIndex + 1));
+            var newEdgeName = prompt('Enter new name for edge:', currentEdgeName);
+            if (newEdgeName !== null && newEdgeName.trim() !== '') {
+                edgeNames[edgeIndex] = newEdgeName.trim();
+                display();
+            }
+        }
+    });
+
+
+    // Limited keyboard controls - only backspace for delete
+    $(window).keydown(function(event) {
+        // Backspace or Delete key
+        if (event.keyCode === 8 || event.keyCode === 46) {
+            event.preventDefault(); // Prevent browser back navigation
+            
+            if (curVertex !== undefined && curVertex >= 0) {
+                // Delete vertex
+                saveHistory();
+                if (curVertex in tracks) {
+                    var oldTracks = tracks;
+                    tracks = {};
+                    _.each(oldTracks, function(track, i) {
+                        if (i != curVertex)
+                            tracks[i < curVertex ? i : i-1] = track;
+                    });
+                }
+                link.removeVertex(curVertex);
+                curVertex = undefined;
+                update();
+            } else if (curEdge !== undefined && curEdge >= 0) {
+                // Delete edge
+                saveHistory();
+                link.removeEdge(curEdge);
+                curEdge = undefined;
+                update();
+            }
+        }
+
+        // Ctrl+Z / Cmd+Z — undo
+        if ((event.ctrlKey || event.metaKey) && event.key === 'z') {
+            event.preventDefault();
+            undo();
+        }
+
+        // Ctrl+Y / Cmd+Y  or  Ctrl+Shift+Z / Cmd+Shift+Z — redo
+        if ((event.ctrlKey || event.metaKey) && (event.key === 'y' || (event.shiftKey && event.key === 'z'))) {
+            event.preventDefault();
+            redo();
+        }
+    });
+    
+    $(window).resize(function() {
         resized = true;
+    });
+
+    // Toolbar button handlers
+    
+    // Zoom buttons (scale around center of canvas)
+    $('#btn-zoom-in').click(function() {
+        scale = Math.min(10, scale * 1.2);
+        display();
+    });
+    $('#btn-zoom-out').click(function() {
+        scale = Math.max(0.1, scale / 1.2);
+        display();
+    });
+
+    // Mode Toggle Button - Switch between Edit and Play mode
+    $('#btn-mode-toggle').click(function() {
+        if (appMode === 'edit') {
+            // Switch to Play mode
+            appMode = 'play';
+            $(this).find('.btn-icon').text('▶️');
+            $(this).find('.btn-label').text('PLAY MODE');
+            $('.edit-mode-section').hide();
+            $('.play-mode-section').show();
+            
+            // Disable adding nodes in play mode
+            currentTool = 'select';
+        } else {
+            // Switch to Edit mode
+            appMode = 'edit';
+            $(this).find('.btn-icon').text('✏️');
+            $(this).find('.btn-label').text('EDIT MODE');
+            $('.edit-mode-section').show();
+            $('.play-mode-section').hide();
+            
+            // Re-enable add node tool
+            currentTool = 'add-node';
+        }
+    });
+    
+    function setToolMode(mode) {
+        currentTool = mode;
+        // Update button active states (except presets, clear, undo, and redo)
+        $('.toolbar-btn').not('.preset-btn, .danger, #btn-toggle-labels, #btn-toggle-style, #btn-trace-loop, #btn-undo, #btn-redo').removeClass('active');
+        $('#btn-' + mode).addClass('active');
+        display();
+    }
+
+    // Undo button
+    $('#btn-undo').click(function() {
+        undo();
+    });
+
+    // Redo button
+    $('#btn-redo').click(function() {
+        redo();
+    });
+    
+    // Tool buttons
+    $('#btn-add-node').click(function() {
+        setToolMode('add-node');
+    });
+    
+    $('#btn-add-edge').click(function() {
+        setToolMode('add-edge');
+    });
+    
+    $('#btn-label').click(function() {
+        setToolMode('label');
+        alert('Label feature: Double-click on any node or edge to rename it!');
+    });
+    
+    $('#btn-fix').click(function() {
+        if (curVertex !== undefined && curVertex >= 0) {
+            // Toggle fix state
+            var i = link.fixed.indexOf(curVertex);
+            saveHistory();
+            if (i >= 0) {
+                link.fixed.splice(i, 1);
+            } else {
+                link.fixed.push(curVertex);
+            }
+            update();
+        } else {
+            alert('Please select a node first by clicking on it.');
+        }
+    });
+    
+    $('#btn-trace').click(function() {
+        if (curVertex !== undefined && curVertex >= 0) {
+            // Toggle trace
+            if (curVertex in tracks) {
+                delete tracks[curVertex];
+            } else {
+                tracks[curVertex] = [];
+            }
+            display();
+        } else {
+            alert('Please select a node first by clicking on it.');
+        }
+    });
+    
+    $('#btn-trace-back').click(function() {
+        // Check if we have any traces
+        var hasTraces = Object.keys(tracks).length > 0;
+        
+        if (!hasTraces) {
+            alert('No traces available. Enable tracing on a node first and let it move.');
+            return;
+        }
+        
+        // Check if any trace has recorded points
+        var hasPoints = false;
+        _.each(tracks, function(track) {
+            if (track.length > 1) hasPoints = true;
+        });
+        
+        if (!hasPoints) {
+            alert('Traces are empty or too short. Move the linkage to record a trace path first.');
+            return;
+        }
+        
+        // Toggle trace back mode
+        if (traceBackMode) {
+            // Stop playback
+            traceBackMode = false;
+            traceBackIndex = {};
+            traceDirection = -1;
+            $(this).removeClass('active');
+            $(this).find('.btn-label').text('Trace Back');
+            $(this).find('.btn-icon').text('⏮');
+        } else {
+            // Start playback (backward)
+            traceBackMode = true;
+            traceBackIndex = {};
+            traceDirection = -1; // Start going backward
+            attractor = undefined; // Turn off attractor
+            $(this).addClass('active');
+            $(this).find('.btn-label').text('Playing');
+            $(this).find('.btn-icon').text('⏸');
+        }
+    });
+    
+    // Toggle loop mode
+    $('#btn-trace-loop').click(function() {
+        traceLoopMode = !traceLoopMode;
+        if (traceLoopMode) {
+            $(this).addClass('active');
+            $(this).find('.btn-label').text('Loop Mode');
+            $(this).find('.btn-icon').text('🔁');
+        } else {
+            $(this).removeClass('active');
+            $(this).find('.btn-label').text('Play Once');
+            $(this).find('.btn-icon').text('▶');
+        }
+    });
+    
+    $('#btn-attractor').click(function() {
+        setToolMode('attractor');
+        if (curVertex === undefined || curVertex < 0) {
+            alert('Please select a node first, then shift-click to place attractor.');
+        }
+    });
+    
+    $('#btn-delete').click(function() {
+        if (curVertex !== undefined && curVertex >= 0) {
+            // Delete vertex
+            saveHistory();
+            if (curVertex in tracks) {
+                var oldTracks = tracks;
+                tracks = {};
+                _.each(oldTracks, function(track, i) {
+                    if (i != curVertex)
+                        tracks[i < curVertex ? i : i-1] = track;
+                });
+            }
+            link.removeVertex(curVertex);
+            curVertex = undefined;
+            update();
+        } else if (curEdge !== undefined && curEdge >= 0) {
+            // Delete edge
+            saveHistory();
+            link.removeEdge(curEdge);
+            curEdge = undefined;
+            update();
+        }
+        // silently do nothing if nothing selected
+    });
+    
+    $('#btn-clear').click(function() {
+        if (confirm('Clear everything? This cannot be undone.')) {
+            saveHistory();
+            reset();
+            link.clear();
+            update();
+        }
+    });
+    
+    // Preset buttons
+    $('.preset-btn').click(function() {
+        var presetIndex = parseInt($(this).attr('data-preset'));
+        if (presetIndex >= 0 && presetIndex < PRESETS.length) {
+            saveHistory();
+            reset();
+            link = PRESETS[presetIndex].copy();
+            update();
+        }
+    });
+    
+    // Display toggle buttons
+    $('#btn-toggle-labels').click(function() {
+        showLabels = !showLabels;
+        if (showLabels) {
+            $(this).addClass('active');
+            $(this).find('.btn-label').text('Show Labels');
+        } else {
+            $(this).removeClass('active');
+            $(this).find('.btn-label').text('Hide Labels');
+        }
+        display();
+    });
+
+    // edge length toggle
+    $('#btn-toggle-lengths').click(function() {
+        showEdgeLengths = !showEdgeLengths;
+        if (showEdgeLengths) {
+            $(this).addClass('active');
+            $(this).find('.btn-label').text('Hide Lengths');
+        } else {
+            $(this).removeClass('active');
+            $(this).find('.btn-label').text('Show Lengths');
+        }
+        display();
+    });
+
+    
+    $('#btn-toggle-style').click(function() {
+        if (nodeStyle === 'filled') {
+            nodeStyle = 'open';
+            $(this).addClass('active');
+            $(this).find('.btn-label').text('Open Nodes');
+            $(this).find('.btn-icon').text('○');
+        } else {
+            nodeStyle = 'filled';
+            $(this).removeClass('active');
+            $(this).find('.btn-label').text('Filled Nodes');
+            $(this).find('.btn-icon').text('●');
+        }
+        display();
+    });
+    
+    // Toggle individual node open/closed
+    $('#btn-toggle-node-open').click(function() {
+        if (curVertex !== undefined && curVertex >= 0) {
+            // Toggle the selected node's open/closed state
+            if (curVertex in openNodes) {
+                openNodes[curVertex] = !openNodes[curVertex];
+            } else {
+                // If not set, toggle from current global default
+                openNodes[curVertex] = (nodeStyle === 'filled');
+            }
+            display();
+        } else {
+            alert('Please select a node first by clicking on it.');
+        }
     });
 
     update();
