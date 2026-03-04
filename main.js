@@ -52,8 +52,16 @@ var lastPanMouseX = 0;
 var lastPanMouseY = 0;
 var spacePressed = false;
 
+// Edge creation state (for add-edge mode)
+var edgeStartNode = -1;        // First node selected for edge (-1 = none)
+var edgePreviewEnd = null;     // [x, y] mouse position or snapped node position
+var edgeSnapNode = -1;         // Node index mouse is hovering over (-1 = none)
+
 // Transparent/preview node for addnode mode
 var previewNodePosition = null;
+
+// Snap distance for edge creation
+var EDGE_SNAP_DIST2 = 400; // 20 pixels squared
 
 // Undo/Redo history stack
 var undoStack = [];
@@ -138,6 +146,9 @@ function reset() {
     nodeNames = {}; // Clear custom node names
     edgeNames = {}; // Clear custom edge names
     openNodes = {}; // Clear individual node open/closed states
+    edgeStartNode = -1; // Clear edge creation state
+    edgePreviewEnd = null;
+    edgeSnapNode = -1;
 }
 
 var VELOCITY_COEFF = 1;
@@ -237,6 +248,17 @@ function display() {
         }
     });
 
+    // Draw edge preview line (in add-edge mode)
+    if (currentTool === 'add-edge' && edgeStartNode >= 0 && edgePreviewEnd) {
+        c.save();
+        c.strokeStyle = colorString(0, 1, 1); // Cyan for preview
+        c.lineWidth = 3;
+        c.setLineDash([5, 5]); // Dashed line
+        strokeLine(c, link.vertices[edgeStartNode], edgePreviewEnd);
+        c.setLineDash([]); // Reset line dash
+        c.restore();
+    }
+
     if (!(view & 4)) {
         c.strokeStyle = colorString(1, 0.7, 0);
         _.each(link.angles, function(a) {
@@ -279,6 +301,29 @@ function display() {
             // Determine node style (individual or global)
             var thisNodeStyle = (i in openNodes) ? (openNodes[i] ? 'open' : 'filled') : nodeStyle;
             
+            // Highlight nodes in add-edge mode
+            if (currentTool == 'add-edge'){
+                if (i == edgeStartNode){
+                    // Start node ->green
+                    c.fillStyle = colorString(0, 1, 0);
+                    c.strokeStyle = colorString(0, 1, 0);
+                } else if (i === edgeSnapNode) {
+                    // Hover node - cyan
+                    c.fillStyle = colorString(0, 1, 1);
+                    c.strokeStyle = colorString(0, 1, 1);
+                } else {
+                    c.fillStyle = colorString (1, 1, 1); //white
+                    c.strokeStyle = colorString (1, 1, 1);
+                } 
+            } else if (i == curVertex){
+                c.fillStyle = colorString (0, 0.5, 1); //blue when selected
+                c.strokeStyle = colorString(0, 0.5, 1);
+            }
+            else{
+                c.fillStyle = colorString(1,1,1); // white for normal nodes
+                c.strokeStyle = colorString(1,1,1);
+            }
+
             if(i == curVertex){
                 c.fillStyle = colorString(0, 0.5, 1); // blue when selected
                 c.strokeStyle = colorString(0, 0.5, 1);
@@ -485,6 +530,20 @@ function pick(x, y) {
     return {};
 }
 
+// Find nearest node to a world position
+function findNearestNode(wx, wy) {
+    var nearest = -1;
+    var minDist = EDGE_SNAP_DIST2;
+    _.each(link.vertices, function(v, i) {
+        var dist2 = link.vertexDist2(wx, wy, i);
+        if (dist2 < minDist) {
+            minDist = dist2;
+            nearest = i;
+        }
+    });
+    return nearest;
+}
+
 function makeEdge(i, j) {
     var edge = i < j ? {i: i, j: j} : {i: j, j: i};
     // Store the edge length to maintain it during movement
@@ -512,6 +571,38 @@ function mouseleft(x, y) {
     var wy = y / scale;
     var w = screenToWorld(x, y);
         var picked = pick(w[0], w[1]); // pick already accounts for scale
+    // Handle add-edge mode
+    if (currentTool === 'add-edge') {
+        if (picked.vertex >= 0) {
+            if (edgeStartNode === -1) {
+                // First node - start edge
+                edgeStartNode = picked.vertex;
+                display();
+            } else {
+                // Second node - complete edge
+                if (picked.vertex !== edgeStartNode) {
+                    var edge = makeEdge(edgeStartNode, picked.vertex);
+                    var k = link.getEdge(edge);
+                    saveHistory();
+                    if (k >= 0) {
+                        // Edge exists, remove it
+                        link.removeEdge(k);
+                    } else {
+                        // Add new edge
+                        link.edges.push(edge);
+                    }
+                    update();
+                }
+                // Reset edge creation state
+                edgeStartNode = -1;
+                edgePreviewEnd = null;
+                edgeSnapNode = -1;
+                display();
+            }
+        }
+        return; // Don't do normal selection in add-edge mode
+    }
+
     if (picked.vertex >= 0 || picked.edge >= 0) {
         if (picked.vertex == curVertex)
             delete picked.vertex; // clicking cur deselects
@@ -772,6 +863,10 @@ $(function() {
         var x = event.pageX - offset.left;
         var y = event.pageY - offset.top;
 
+        // Don't drag in add-edge mode
+        if (currentTool === 'add-edge') return;
+
+
         // Space+click for panning
         if (spacePressed) {
             isPanDragging = true;
@@ -859,6 +954,26 @@ $(function() {
             curVertex = dragVertex;
             display();
         }
+
+        // Edge creation preview
+        else if (currentTool === 'add-edge' && edgeStartNode >= 0) {
+            var wx = x / scale;
+            var wy = y / scale;
+            // Find nearest node to snap to
+            var nearestNode = findNearestNode(wx, wy);
+            
+            if (nearestNode >= 0 && nearestNode !== edgeStartNode) {
+                // Snap to node
+                edgePreviewEnd = link.vertices[nearestNode];
+                edgeSnapNode = nearestNode;
+            } else {
+                // Follow mouse
+                edgePreviewEnd = [wx, wy];
+                edgeSnapNode = -1;
+            }
+            display();
+        }
+
         // Preview node in add-node mode
         else if(currentTool === 'add-node'){
             previewNodePosition = [x / scale, y / scale];
@@ -878,6 +993,14 @@ $(function() {
             previewNodePosition = null;
             display();
         }
+
+        // Clear edge preview
+        if (edgePreviewEnd !== null) {
+            edgePreviewEnd = null;
+            edgeSnapNode = -1;
+            display();
+        }
+
         // Stop pan dragging if mouse leaves
         if (isPanDragging) {
             isPanDragging = false;
@@ -962,6 +1085,13 @@ $(function() {
 
     // Limited keyboard controls - only backspace for delete
     $(window).keydown(function(event) {
+        // Escape key - cancel edge creation
+        if (event.key === 'Escape' && currentTool === 'add-edge') {
+            edgeStartNode = -1;
+            edgePreviewEnd = null;
+            edgeSnapNode = -1;
+            display();
+        }
         // Space for panning (press to enable)
         if (event.key === ' ') {
             event.preventDefault();
@@ -1069,6 +1199,10 @@ $(function() {
             
             // Disable adding nodes in play mode
             currentTool = 'select';
+             // Clear edge creation state
+            edgeStartNode = -1;
+            edgePreviewEnd = null;
+            edgeSnapNode = -1;
         } else {
             // Switch to Edit mode
             appMode = 'edit';
@@ -1084,6 +1218,10 @@ $(function() {
     
     function setToolMode(mode) {
         currentTool = mode;
+        // Clear edge creation state when switching tools
+        edgeStartNode = -1;
+        edgePreviewEnd = null;
+        edgeSnapNode = -1;
         // Update button active states (except presets, clear, undo, and redo)
         $('.toolbar-btn').not('.preset-btn, .danger, #btn-toggle-labels, #btn-toggle-style, #btn-trace-loop, #btn-undo, #btn-redo').removeClass('active');
         $('#btn-' + mode).addClass('active');
