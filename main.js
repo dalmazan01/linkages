@@ -12,11 +12,14 @@ var INFOS = 2;
 // zoom state (simple scaling around origin)
 var scale = 1.0; // 1 = 100%
 
+// pan state (translation)
+var panX = 0;
+var panY = 0;
 
 function screenToWorld(x, y) {
     // Convert canvas (screen) coords to linkage (world) coords.
-    // We only support uniform scaling in this project.
-    return [x / scale, y / scale];
+    // Account for both scale and pan offset
+    return [(x - panX) / scale, (y - panY) / scale];
 }
 
 // Phase 1 features
@@ -43,6 +46,12 @@ var openNodes = {}; // Track which specific nodes are open {index: true/false}
 var isDragging = false;
 var dragVertex = -1;
 
+// Pan drag state (for space+drag panning)
+var isPanDragging = false;
+var lastPanMouseX = 0;
+var lastPanMouseY = 0;
+var spacePressed = false;
+
 // Transparent/preview node for addnode mode
 var previewNodePosition = null;
 
@@ -55,7 +64,13 @@ function makeSnapshot() {
     return {
         vertices  : link.vertices.map(function(v) { return [v[0], v[1]]; }),
         fixed     : link.fixed.slice(),
-        edges     : link.edges.map(function(e) { return {i: e.i, j: e.j}; }),
+        edges     : link.edges.map(function(e) { 
+            var edgeCopy = {i: e.i, j: e.j};
+            if (typeof e.length !== 'undefined') {
+                edgeCopy.length = e.length;
+            }
+            return edgeCopy;
+        }),
         angles    : link.angles.map(function(a) { return {i: a.i, j: a.j, k: a.k}; }),
         nodeNames : $.extend({}, nodeNames),
         edgeNames : $.extend({}, edgeNames),
@@ -192,8 +207,9 @@ function display() {
                    50, 50);
     }
 
-    // apply uniform scale for drawing linkage
+    // apply uniform scale and pan for drawing linkage
     c.save();
+    c.translate(panX, panY);
     c.scale(scale, scale);
 
     _.each(link.edges, function(e, k) {
@@ -348,7 +364,8 @@ function saveLinkageAsXML() {
     lines.push('  <edges>');
     _.each(link.edges, function(e, k) {
         var name = edgeNames[k] ? ' name="' + escXML(edgeNames[k]) + '"' : '';
-        lines.push('    <edge id="' + k + '" i="' + e.i + '" j="' + e.j + '"' + name + '/>');
+        var length = (typeof e.length !== 'undefined') ? ' length="' + e.length + '"' : '';
+        lines.push('    <edge id="' + k + '" i="' + e.i + '" j="' + e.j + '"' + length + name + '/>');
     });
     lines.push('  </edges>');
 
@@ -414,6 +431,16 @@ function loadLinkageFromXML(file) {
                     i: parseInt(ed.getAttribute('i')),
                     j: parseInt(ed.getAttribute('j'))
                 };
+                if (ed.hasAttribute('length')) {
+                    link.edges[idx].length = parseFloat(ed.getAttribute('length'));
+                } else {
+                    // Fallback: calculate from vertex positions
+                    var vi = link.vertices[link.edges[idx].i];
+                    var vj = link.vertices[link.edges[idx].j];
+                    if (vi && vj) {
+                        link.edges[idx].length = numeric.norm2(numeric.sub(vj, vi));
+                    }
+                }
                 if (ed.hasAttribute('name'))
                     edgeNames[idx] = ed.getAttribute('name');
             });
@@ -459,8 +486,12 @@ function pick(x, y) {
 }
 
 function makeEdge(i, j) {
-    if (i < j) return {i: i, j: j};
-    else return {i: j, j: i};
+    var edge = i < j ? {i: i, j: j} : {i: j, j: i};
+    // Store the edge length to maintain it during movement
+    var vi = link.vertices[edge.i];
+    var vj = link.vertices[edge.j];
+    edge.length = numeric.norm2(numeric.sub(vj, vi));
+    return edge;
 }
 
 function makeAngle(i, j, k) {
@@ -710,6 +741,9 @@ function idle() {
                 }
             });
 
+            // Correct edge length drift from finite step integration
+            link.correctEdgeLengths();
+            
             update();
         }
     }
@@ -737,6 +771,14 @@ $(function() {
         var offset = $(this).offset();
         var x = event.pageX - offset.left;
         var y = event.pageY - offset.top;
+
+        // Space+click for panning
+        if (spacePressed) {
+            isPanDragging = true;
+            lastPanMouseX = x;
+            lastPanMouseY = y;
+            return;
+        }
 
         // Start constrained drag ONLY in select/play mode.
         // Other tools (add-node/add-edge/delete/label) rely on mouseup handlers.
@@ -771,7 +813,11 @@ $(function() {
         var x = event.pageX - offset.left;
         var y = event.pageY - offset.top;
         
-        if (isDragging) {
+        if (isPanDragging) {
+            // End pan drag
+            isPanDragging = false;
+            display();
+        } else if (isDragging) {
             // End drag
             isDragging = false;
             dragVertex = -1;
@@ -793,6 +839,18 @@ $(function() {
         var offset = $(this).offset();
         var x = event.pageX - offset.left;
         var y = event.pageY - offset.top;
+
+        // Pan dragging with space+drag
+        if (isPanDragging) {
+            var dx = x - lastPanMouseX;
+            var dy = y - lastPanMouseY;
+            panX += dx;
+            panY += dy;
+            lastPanMouseX = x;
+            lastPanMouseY = y;
+            display();
+            return;
+        }
 
         // Dragging a node: set an attractor at the cursor and let the
         // rigidity projection in idle() move the linkage along allowed DOF.
@@ -818,6 +876,11 @@ $(function() {
     $('#canvas').mouseleave(function(){
         if(previewNodePosition !== null){
             previewNodePosition = null;
+            display();
+        }
+        // Stop pan dragging if mouse leaves
+        if (isPanDragging) {
+            isPanDragging = false;
             display();
         }
         // Also stop dragging if mouse leaves
@@ -886,9 +949,46 @@ $(function() {
         }
     });
 
+    // Scroll wheel to zoom
+    $('#canvas').on('wheel', function(event) {
+        event.preventDefault();
+        
+        // Get scroll direction (negative = scroll down/zoom out, positive = scroll up/zoom in)
+        var delta = event.originalEvent.deltaY < 0 ? 1.2 : 0.833; // 1/1.2 ≈ 0.833
+        
+        scale = Math.max(0.1, Math.min(10, scale * delta));
+        display();
+    });
 
     // Limited keyboard controls - only backspace for delete
     $(window).keydown(function(event) {
+        // Space for panning (press to enable)
+        if (event.key === ' ') {
+            event.preventDefault();
+            spacePressed = true;
+            return;
+        }
+
+        // Arrow keys for panning
+        var panSpeed = 20; // pixels per keystroke
+        if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            panY += panSpeed;
+            display();
+        } else if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            panY -= panSpeed;
+            display();
+        } else if (event.key === 'ArrowLeft') {
+            event.preventDefault();
+            panX += panSpeed;
+            display();
+        } else if (event.key === 'ArrowRight') {
+            event.preventDefault();
+            panX -= panSpeed;
+            display();
+        }
+
         // Backspace or Delete key
         if (event.keyCode === 8 || event.keyCode === 46) {
             event.preventDefault(); // Prevent browser back navigation
@@ -926,6 +1026,18 @@ $(function() {
         if ((event.ctrlKey || event.metaKey) && (event.key === 'y' || (event.shiftKey && event.key === 'z'))) {
             event.preventDefault();
             redo();
+        }
+    });
+    
+    // Track when space key is released
+    $(window).keyup(function(event) {
+        if (event.key === ' ') {
+            event.preventDefault();
+            spacePressed = false;
+            if (isPanDragging) {
+                isPanDragging = false;
+                display();
+            }
         }
     });
     
