@@ -301,12 +301,37 @@ function display() {
             // Determine node style (individual or global)
             var thisNodeStyle = (i in openNodes) ? (openNodes[i] ? 'open' : 'filled') : nodeStyle;
             
-            // Highlight nodes in add-edge mode
+                                    // Highlight nodes in add-edge mode
             if (currentTool == 'add-edge'){
                 if (i == edgeStartNode){
-                    // Start node ->green
+                    // Start node -> SUPER BRIGHT glow (multiple layers)
+                    c.save();
+                    
+                    // Outer glow layer
+                    c.shadowBlur = 30;
+                    c.shadowColor = '#00ff00';
                     c.fillStyle = colorString(0, 1, 0);
                     c.strokeStyle = colorString(0, 1, 0);
+                    fillPoint(c, v, thisNodeStyle);
+                    
+                    // Middle glow layer
+                    c.shadowBlur = 20;
+                    c.shadowColor = '#00ff00';
+                    fillPoint(c, v, thisNodeStyle);
+                    
+                    // Inner bright core
+                    c.shadowBlur = 10;
+                    c.shadowColor = '#00ff00';
+                    fillPoint(c, v, thisNodeStyle);
+                    
+                    c.restore();
+                    
+                    // Skip the normal fillPoint below
+                    var skipNormalFill = true;
+
+                    // Add glow effect
+                    c.shadowBlur = 40;
+                    c.shadowColor = 'rgba(0, 255, 0, 1)';
                 } else if (i === edgeSnapNode) {
                     // Hover node - cyan
                     c.fillStyle = colorString(0, 1, 1);
@@ -338,7 +363,9 @@ function display() {
             }
             
             fillPoint(c, v, thisNodeStyle);
-            
+            // Reset shadow after drawing
+            c.shadowBlur = 0;
+
             // Draw fixed point indicator (pin icon)
             if (isFixed && showLabels) {
                 c.fillStyle = colorString(1, 0.2, 0.2); // Red for fixed
@@ -566,36 +593,10 @@ function mouseleft(x, y) {
     var wy = y / scale;
     var w = screenToWorld(x, y);
         var picked = pick(w[0], w[1]); // pick already accounts for scale
-    // Handle add-edge mode
+    
+        // In add-edge mode, ignore clicks (we handle mousedown/mouseup instead)
     if (currentTool === 'add-edge') {
-        if (picked.vertex >= 0) {
-            if (edgeStartNode === -1) {
-                // First node - start edge
-                edgeStartNode = picked.vertex;
-                display();
-            } else {
-                // Second node - complete edge
-                if (picked.vertex !== edgeStartNode) {
-                    var edge = makeEdge(edgeStartNode, picked.vertex);
-                    var k = link.getEdge(edge);
-                    saveHistory();
-                    if (k >= 0) {
-                        // Edge exists, remove it
-                        link.removeEdge(k);
-                    } else {
-                        // Add new edge
-                        link.edges.push(edge);
-                    }
-                    update();
-                }
-                // Reset edge creation state
-                edgeStartNode = -1;
-                edgePreviewEnd = null;
-                edgeSnapNode = -1;
-                display();
-            }
-        }
-        return; // Don't do normal selection in add-edge mode
+        return;
     }
 
     if (picked.vertex >= 0 || picked.edge >= 0) {
@@ -858,9 +859,20 @@ $(function() {
         var x = event.pageX - offset.left;
         var y = event.pageY - offset.top;
 
-        // Don't drag in add-edge mode
-        if (currentTool === 'add-edge') return;
 
+
+
+        // Handle add-edge mode - start edge on mousedown
+        if (currentTool === 'add-edge') {
+            var w = screenToWorld(x, y);
+            var picked = pick(w[0], w[1]);
+            if (picked.vertex >= 0) {
+                edgeStartNode = picked.vertex;
+                edgePreviewEnd = link.vertices[edgeStartNode];
+                display();
+            }
+            return;
+        }
 
         // Space+click for panning
         if (spacePressed) {
@@ -902,6 +914,32 @@ $(function() {
         var offset = $(this).offset();
         var x = event.pageX - offset.left;
         var y = event.pageY - offset.top;
+        
+        // Handle add-edge mode - complete edge on mouseup
+        if (currentTool === 'add-edge' && edgeStartNode >= 0) {
+            var w = screenToWorld(x, y);
+            var picked = pick(w[0], w[1]);
+            
+            // Only create edge if released on a different node
+            if (picked.vertex >= 0 && picked.vertex !== edgeStartNode) {
+                var edge = makeEdge(edgeStartNode, picked.vertex);
+                var k = link.getEdge(edge);
+                saveHistory();
+                if (k >= 0) {
+                    link.removeEdge(k);
+                } else {
+                    link.edges.push(edge);
+                }
+                update();
+            }
+            
+            // Reset edge creation state
+            edgeStartNode = -1;
+            edgePreviewEnd = null;
+            edgeSnapNode = -1;
+            display();
+            return;
+        }
         
         if (isPanDragging) {
             // End pan drag
@@ -1057,12 +1095,35 @@ $(function() {
         });
         
         if (edgeIndex >= 0) {
-            // Rename edge
-            var currentEdgeName = edgeNames[edgeIndex] || ('E' + (edgeIndex + 1));
-            var newEdgeName = prompt('Enter new name for edge:', currentEdgeName);
-            if (newEdgeName !== null && newEdgeName.trim() !== '') {
-                edgeNames[edgeIndex] = newEdgeName.trim();
-                display();
+            // Show options: rename or change length
+            var edge = link.edges[edgeIndex];
+            var currentName = edgeNames[edgeIndex] || ('E' + (edgeIndex + 1));
+            var currentLength = edge.length ? edge.length.toFixed(2) : 'auto';
+            
+            var choice = prompt(
+                'Edge: ' + currentName + '\n' +
+                'Current length: ' + currentLength + '\n\n' +
+                'Enter:\n' +
+                '  - New name (letters only)\n' +
+                '  - New length (numbers only)\n' +
+                '  - Leave blank to cancel'
+            );
+            
+            if (choice !== null && choice.trim() !== '') {
+                choice = choice.trim();
+                
+                // Check if input is a number (for length)
+                var numValue = parseFloat(choice);
+                if (!isNaN(numValue) && numValue > 0) {
+                    // It's a number - change length
+                    saveHistory();
+                    link.edges[edgeIndex].length = numValue;
+                    update();
+                } else {
+                    // It's text - rename edge
+                    edgeNames[edgeIndex] = choice;
+                    display();
+                }
             }
         }
     });
