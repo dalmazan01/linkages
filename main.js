@@ -371,11 +371,6 @@ function display() {
         c.fillStyle = colorString(0.7, 0.7, 1); //Color of transperent node
         c.strokeStyle = colorString(0.7, 0.7, 1);
 
-        var thisNodeStyle = nodeStyle;
-        if (thisNodeStyle === 'open'){
-            c.lineWidth = 2;
-        }
-
         fillPoint(c, previewNodePosition, thisNodeStyle);
         c.restore();
     }
