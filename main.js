@@ -538,15 +538,17 @@ function escXML(str) {
 }
 
 function pick(x, y) {
-    // adjust for simple scale
-    var sx = x / scale;
-    var sy = y / scale;
-    var i = link.findVertex(sx, sy);
-    if (i >= 0 && link.vertexDist2(sx, sy, i) < PICK_DIST2)
+    // Use screenToWorld to properly handle both scale AND pan
+    var w = screenToWorld(x, y);
+    var wx = w[0];
+    var wy = w[1];
+    
+    var i = link.findVertex(wx, wy);
+    if (i >= 0 && link.vertexDist2(wx, wy, i) < PICK_DIST2)
         return {vertex: i};
 
-    var k = link.findEdge(sx, sy);
-    if (k >= 0 && link.edgeDist2(sx, sy, k) < PICK_DIST2)
+    var k = link.findEdge(wx, wy);
+    if (k >= 0 && link.edgeDist2(wx, wy, k) < PICK_DIST2)
         return {edge: k};
 
     return {};
@@ -589,10 +591,10 @@ function makeAngle2(i1, j1, i2, j2) {
 
 function mouseleft(x, y) {
     // convert to world coordinates before use
-    var wx = x / scale;
-    var wy = y / scale;
     var w = screenToWorld(x, y);
-        var picked = pick(w[0], w[1]); // pick already accounts for scale
+    var wx = w[0];
+    var wy = w[1];
+    var picked = pick(x, y); // pick now handles conversion itself
     
         // In add-edge mode, ignore clicks (we handle mousedown/mouseup instead)
     if (currentTool === 'add-edge') {
@@ -625,8 +627,7 @@ function mouseleft(x, y) {
 }
 
 function mousemiddle(x, y) {
-    var w = screenToWorld(x, y);
-        var picked = pick(w[0], w[1]);
+    var picked = pick(x, y);  // pick now handles conversion
     var i = picked.vertex, k = picked.edge;
 
     if (i >= 0 && curVertex >= 0 && i != curVertex) {
@@ -654,8 +655,9 @@ function mousemiddle(x, y) {
 
 function mouseright(x, y) {
     // world coordinates
-    var wx = x / scale;
-    var wy = y / scale;
+    var w = screenToWorld(x, y);
+    var wx = w[0];
+    var wy = w[1];
     if (attractor && numeric.norm2Squared(numeric.sub([wx, wy], attractor)) < PICK_DIST2)
         attractor = undefined;
     else
@@ -864,8 +866,7 @@ $(function() {
 
         // Handle add-edge mode - start edge on mousedown
         if (currentTool === 'add-edge') {
-            var w = screenToWorld(x, y);
-            var picked = pick(w[0], w[1]);
+            var picked = pick(x, y);  // pick() now handles conversion
             if (picked.vertex >= 0) {
                 edgeStartNode = picked.vertex;
                 edgePreviewEnd = link.vertices[edgeStartNode];
@@ -899,7 +900,9 @@ $(function() {
                 curVertex = picked.vertex;
 
                 // Attractor lives in world coordinates (same space as link.vertices)
-                attractor = [x / scale, y / scale];
+                var w = screenToWorld(x, y);
+                attractor = [w[0], w[1]];
+
                 display();
             } else if (picked.edge >= 0) {
                 curEdge = picked.edge;
@@ -917,8 +920,7 @@ $(function() {
         
         // Handle add-edge mode - complete edge on mouseup
         if (currentTool === 'add-edge' && edgeStartNode >= 0) {
-            var w = screenToWorld(x, y);
-            var picked = pick(w[0], w[1]);
+            var picked = pick(x, y);  // pick() now handles conversion
             
             // Only create edge if released on a different node
             if (picked.vertex >= 0 && picked.vertex !== edgeStartNode) {
@@ -983,15 +985,17 @@ $(function() {
         // Dragging a node: set an attractor at the cursor and let the
         // rigidity projection in idle() move the linkage along allowed DOF.
         if (isDragging && dragVertex >= 0) {
-            attractor = [x / scale, y / scale];
+            var w = screenToWorld(x, y);
+            attractor = [w[0], w[1]];
             curVertex = dragVertex;
             display();
         }
 
         // Edge creation preview
         else if (currentTool === 'add-edge' && edgeStartNode >= 0) {
-            var wx = x / scale;
-            var wy = y / scale;
+            var w = screenToWorld(x, y);
+            var wx = w[0];
+            var wy = w[1];
             // Find nearest node to snap to
             var nearestNode = findNearestNode(wx, wy);
             
@@ -1009,7 +1013,8 @@ $(function() {
 
         // Preview node in add-node mode
         else if(currentTool === 'add-node'){
-            previewNodePosition = [x / scale, y / scale];
+            var w = screenToWorld(x, y);
+            previewNodePosition = [w[0], w[1]];
             display();
         }
         else{
