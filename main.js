@@ -1527,6 +1527,61 @@ $(function() {
         }
     });
 
+    // Edge context menu handlers
+    $('#menu-set-length-btn').click(function() {
+        var edgeIndex = window.currentEditEdge;
+        if (edgeIndex >= 0 && edgeIndex < link.edges.length) {
+            var newLength = parseFloat($('#menu-length-input').val());
+            
+            if (!isNaN(newLength) && newLength > 0) {
+                saveHistory();
+                link.edges[edgeIndex].length = newLength;
+                update();
+                $('#edge-context-menu').hide();
+            } else {
+                alert('❌ Please enter a valid positive number!');
+                $('#menu-length-input').focus();
+            }
+        }
+    });
+    
+    $('#menu-rename-btn').click(function() {
+        $('#edge-context-menu').hide();
+        
+        var edgeIndex = window.currentEditEdge;
+        if (edgeIndex >= 0 && edgeIndex < link.edges.length) {
+            var currentName = edgeNames[edgeIndex] || ('E' + (edgeIndex + 1));
+            var newName = prompt('Enter new name for edge:', currentName);
+            
+            if (newName !== null && newName.trim() !== '') {
+                edgeNames[edgeIndex] = newName.trim();
+                display();
+            }
+        }
+    });
+    
+    $('#menu-cancel-btn').click(function() {
+        $('#edge-context-menu').hide();
+    });
+    
+    // Press Enter to set length
+    $('#menu-length-input').keypress(function(e) {
+        if (e.which === 13) { // Enter key
+            $('#menu-set-length-btn').click();
+        }
+    });
+    
+    // Click anywhere else to close menu
+    $(document).click(function(e) {
+        if (!$(e.target).closest('#edge-context-menu').length) {
+            $('#edge-context-menu').hide();
+        }
+    });
+    
+    // Prevent menu from closing when clicking inside it
+    $('#edge-context-menu').click(function(e) {
+        e.stopPropagation();
+    });
     update();
     idle();
 });
