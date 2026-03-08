@@ -152,3 +152,43 @@ body {
 #toolbar::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.5);
 }
+/* Edge Context Menu */
+#edge-context-menu {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+}
+
+#edge-context-menu input:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+}
+
+#edge-context-menu input::placeholder {
+    color: #666;
+}
+
+#menu-set-length-btn:hover {
+    background: #45a049;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+
+#menu-rename-btn:hover {
+    background: #1976D2;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+
+#menu-cancel-btn:hover {
+    background: #555;
+    transform: translateY(-1px);
+}
+
+#edge-context-menu button {
+    transition: all 0.2s ease;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+}
+
+#edge-context-menu button:active {
+    transform: translateY(0);
+}

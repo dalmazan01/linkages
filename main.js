@@ -32,7 +32,7 @@ var traceDirection = -1; // -1 for backward, 1 for forward
 var traceLoopMode = true; // true = loop/bounce, false = play once
 
 // Tool mode
-var currentTool = 'add-node'; // 'add-node', 'select', 'add-edge', etc.
+var currentTool = 'add-select'; // 'add-node', 'select', 'add-edge', etc.
 var appMode = 'edit'; // 'edit' or 'play' mode
 
 // Custom label names
@@ -301,11 +301,13 @@ function display() {
             // Determine node style (individual or global)
             var thisNodeStyle = (i in openNodes) ? (openNodes[i] ? 'open' : 'filled') : nodeStyle;
             
-                                    // Highlight nodes in add-edge mode
+            
+            // Highlight nodes in add-edge mode
             if (currentTool == 'add-edge'){
                 if (i == edgeStartNode){
                     // Start node -> SUPER BRIGHT glow (multiple layers)
                     c.save();
+                    
                     
                     // Outer glow layer
                     c.shadowBlur = 30;
@@ -398,7 +400,7 @@ function display() {
         c.fillStyle = colorString(0.7, 0.7, 1); //Color of transperent node
         c.strokeStyle = colorString(0.7, 0.7, 1);
 
-        fillPoint(c, previewNodePosition, thisNodeStyle);
+        fillPoint(c, previewNodePosition, nodeStyle);  // ✅ Use nodeStyle instead
         c.restore();
     }
     // undo scale transform
@@ -1099,37 +1101,48 @@ $(function() {
             }
         });
         
-        if (edgeIndex >= 0) {
-            // Show options: rename or change length
+if (edgeIndex >= 0) {
+            event.preventDefault();
+            
+            // Store current edge being edited
+            window.currentEditEdge = edgeIndex;
+            
             var edge = link.edges[edgeIndex];
             var currentName = edgeNames[edgeIndex] || ('E' + (edgeIndex + 1));
-            var currentLength = edge.length ? edge.length.toFixed(2) : 'auto';
+            var currentLength = edge.length ? edge.length : numeric.norm2(numeric.sub(link.vertices[edge.j], link.vertices[edge.i]));
             
-            var choice = prompt(
-                'Edge: ' + currentName + '\n' +
-                'Current length: ' + currentLength + '\n\n' +
-                'Enter:\n' +
-                '  - New name (letters only)\n' +
-                '  - New length (numbers only)\n' +
-                '  - Leave blank to cancel'
-            );
+            // Position menu near cursor
+            var menuX = event.clientX;
+            var menuY = event.clientY;
             
-            if (choice !== null && choice.trim() !== '') {
-                choice = choice.trim();
-                
-                // Check if input is a number (for length)
-                var numValue = parseFloat(choice);
-                if (!isNaN(numValue) && numValue > 0) {
-                    // It's a number - change length
-                    saveHistory();
-                    link.edges[edgeIndex].length = numValue;
-                    update();
-                } else {
-                    // It's text - rename edge
-                    edgeNames[edgeIndex] = choice;
-                    display();
-                }
+            // Keep menu on screen
+            var menu = $('#edge-context-menu');
+            var menuWidth = 220;
+            var menuHeight = 200;
+            
+            if (menuX + menuWidth > window.innerWidth) {
+                menuX = window.innerWidth - menuWidth - 10;
             }
+            if (menuY + menuHeight > window.innerHeight) {
+                menuY = window.innerHeight - menuHeight - 10;
+            }
+            
+            // Fill in menu
+            $('#menu-edge-name').text(currentName);
+            $('#menu-current-length').text(currentLength.toFixed(2));
+            $('#menu-length-input').val('');
+            
+            // Show menu at cursor position
+            menu.css({
+                left: menuX + 'px',
+                top: menuY + 'px',
+                display: 'block'
+            });
+            
+            // Focus input
+            setTimeout(function() {
+                $('#menu-length-input').focus();
+            }, 100);
         }
     });
 
@@ -1272,8 +1285,8 @@ $(function() {
             $('.edit-mode-section').show();
             $('.play-mode-section').hide();
             
-            // Re-enable add node tool
-            currentTool = 'add-node';
+            // Default to select mode in edit
+            setToolMode('select');
         }
     });
     
@@ -1283,9 +1296,21 @@ $(function() {
         edgeStartNode = -1;
         edgePreviewEnd = null;
         edgeSnapNode = -1;
-        // Update button active states (except presets, clear, undo, and redo)
-        $('.toolbar-btn').not('.preset-btn, .danger, #btn-toggle-labels, #btn-toggle-style, #btn-trace-loop, #btn-undo, #btn-redo').removeClass('active');
+        
+        // Clear preview node when leaving add-node mode
+        previewNodePosition = null;
+        
+        // Update button active states - remove active from ALL tool buttons
+        $('#btn-select').removeClass('active');
+        $('#btn-add-node').removeClass('active');
+        $('#btn-add-edge').removeClass('active');
+        $('#btn-delete').removeClass('active');
+        $('#btn-label').removeClass('active');
+        $('#btn-attractor').removeClass('active');
+        
+        // Add active to current tool
         $('#btn-' + mode).addClass('active');
+        
         display();
     }
 
@@ -1300,6 +1325,10 @@ $(function() {
     });
     
     // Tool buttons
+    $('#btn-select').click(function() {
+        setToolMode('select');
+    });
+
     $('#btn-add-node').click(function() {
         setToolMode('add-node');
     });
@@ -1527,6 +1556,62 @@ $(function() {
         }
     });
 
+// Edge context menu handlers
+    $('#menu-set-length-btn').click(function() {
+        var edgeIndex = window.currentEditEdge;
+        if (edgeIndex >= 0 && edgeIndex < link.edges.length) {
+            var newLength = parseFloat($('#menu-length-input').val());
+            
+            if (!isNaN(newLength) && newLength > 0) {
+                saveHistory();
+                link.edges[edgeIndex].length = newLength;
+                link.correctEdgeLengths();
+                update();
+                $('#edge-context-menu').hide();
+            } else {
+                alert('❌ Please enter a valid positive number!');
+                $('#menu-length-input').focus();
+            }
+        }
+    });
+    
+    $('#menu-rename-btn').click(function() {
+        $('#edge-context-menu').hide();
+        
+        var edgeIndex = window.currentEditEdge;
+        if (edgeIndex >= 0 && edgeIndex < link.edges.length) {
+            var currentName = edgeNames[edgeIndex] || ('E' + (edgeIndex + 1));
+            var newName = prompt('Enter new name for edge:', currentName);
+            
+            if (newName !== null && newName.trim() !== '') {
+                edgeNames[edgeIndex] = newName.trim();
+                display();
+            }
+        }
+    });
+    
+    $('#menu-cancel-btn').click(function() {
+        $('#edge-context-menu').hide();
+    });
+    
+    // Press Enter to set length
+    $('#menu-length-input').keypress(function(e) {
+        if (e.which === 13) { // Enter key
+            $('#menu-set-length-btn').click();
+        }
+    });
+    
+    // Click anywhere else to close menu
+    $(document).click(function(e) {
+        if (!$(e.target).closest('#edge-context-menu').length) {
+            $('#edge-context-menu').hide();
+        }
+    });
+    
+    // Prevent menu from closing when clicking inside it
+    $('#edge-context-menu').click(function(e) {
+        e.stopPropagation();
+    });
     update();
     idle();
 });
