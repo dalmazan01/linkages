@@ -863,8 +863,13 @@ $(function() {
         var x = event.pageX - offset.left;
         var y = event.pageY - offset.top;
 
-
-
+        // Right-click drag for panning
+        if (event.button === 2) {
+            isPanDragging = true;
+            lastPanMouseX = x;
+            lastPanMouseY = y;
+            return;
+        }
 
         // Handle add-edge mode - start edge on mousedown
         if (currentTool === 'add-edge') {
@@ -955,8 +960,8 @@ $(function() {
             dragVertex = -1;
             attractor = undefined;
             update(); // recompute DOF and redraw
-        } else {
-            // Normal click behavior (mouseleft/middle/right handle scale themselves)
+        } else if (event.button !== 2) {
+            // Normal click behavior (skip for right-click which is used for panning)
             if (event.shiftKey)
                 mouseright(x, y);
             else if (event.altKey)
@@ -1053,6 +1058,12 @@ $(function() {
             attractor = undefined;
             update();
         }
+    });
+    
+    // Prevent context menu on canvas (since right-click is used for panning)
+    $('#canvas').contextmenu(function(event) {
+        event.preventDefault();
+        return false;
     });
     
     // Double-click to rename nodes or edges
