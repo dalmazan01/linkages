@@ -1173,6 +1173,7 @@ if (edgeIndex >= 0) {
         scale = Math.max(0.1, Math.min(10, scale * delta));
         display();
     });
+    
 
     // Limited keyboard controls - only backspace for delete
     $(window).keydown(function(event) {
