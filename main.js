@@ -153,6 +153,7 @@ function reset() {
 
 var VELOCITY_COEFF = 1;
 var VELOCITY_MAG = 1;
+var playSpeed = 1.0; // slider-driven speed multiplier
 
 var VERTEX_SIZE = 10;
 var LINE_WIDTH = 4;
@@ -1307,6 +1308,20 @@ if (edgeIndex >= 0) {
             setToolMode('select');
         }
     });
+
+    $('#play-speed-slider').on('input change', function() {
+        var newSpeed = parseFloat($(this).val());
+        if (isNaN(newSpeed) || newSpeed <= 0) newSpeed = 1.0;
+
+        playSpeed = newSpeed;
+        VELOCITY_COEFF = playSpeed;
+        VELOCITY_MAG = 1.0;
+        $('#play-speed-value').text(playSpeed.toFixed(1));
+    });
+
+    // Initialize slider display in case the default is changed above
+    $('#play-speed-slider').val(playSpeed);
+    $('#play-speed-value').text(playSpeed.toFixed(1));
     
     function setToolMode(mode) {
         currentTool = mode;
