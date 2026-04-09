@@ -32,7 +32,7 @@ var traceDirection = -1; // -1 for backward, 1 for forward
 var traceLoopMode = true; // true = loop/bounce, false = play once
 
 // Tool mode
-var currentTool = 'add-select'; // 'add-node', 'select', 'add-edge', etc.
+var currentTool = 'select'; // 'add-node', 'select', 'add-edge', etc.
 var appMode = 'edit'; // 'edit' or 'play' mode
 
 // Custom label names
@@ -204,6 +204,7 @@ function colorString(r, g, b) {
 
 
 function display() {
+    console.log('display called, vertices:', link.vertices.length);
     var num = numeric;
     var canvas = $('#canvas');
     canvas.attr('width', canvas.width());
@@ -593,11 +594,14 @@ function makeAngle2(i1, j1, i2, j2) {
 }
 
 function mouseleft(x, y) {
+    console.log('mouseleft called with x:', x, 'y:', y, 'currentTool:', currentTool);
     // convert to world coordinates before use
     var w = screenToWorld(x, y);
     var wx = w[0];
     var wy = w[1];
+    console.log('world coords:', wx, wy);
     var picked = pick(x, y); // pick now handles conversion itself
+    console.log('picked:', picked);
     
         // In add-edge mode, ignore clicks (we handle mousedown/mouseup instead)
     if (currentTool === 'add-edge') {
@@ -605,6 +609,7 @@ function mouseleft(x, y) {
     }
 
     if (picked.vertex >= 0 || picked.edge >= 0) {
+        console.log('picked vertex or edge');
         if (picked.vertex == curVertex)
             delete picked.vertex; // clicking cur deselects
         if (picked.edge == curEdge)
@@ -614,8 +619,10 @@ function mouseleft(x, y) {
         display();
     }
     else {
+        console.log('no pick, currentTool:', currentTool);
         // Only add node if in add-node mode
         if (currentTool === 'add-node') {
+            console.log('adding node');
             saveHistory();
             link.vertices.push([wx, wy]);
             update();
@@ -928,9 +935,15 @@ $(function() {
 
 // Mouse up - stop dragging or handle clicks
     $('#canvas').mouseup(function(event) {
+        console.log('canvas mouseup event, button:', event.button, 'isPanDragging:', isPanDragging, 'isDragging:', isDragging);
+        // Reset pan dragging on left click to allow normal clicks even after accidental right click
+        if (event.button !== 2) {
+            isPanDragging = false;
+        }
         var offset = $(this).offset();
         var x = event.pageX - offset.left;
         var y = event.pageY - offset.top;
+        console.log('offset:', offset.left, offset.top, 'x:', x, 'y:', y);
         
         // Handle add-edge mode - complete edge on mouseup
         if (currentTool === 'add-edge' && edgeStartNode >= 0) {
@@ -1324,6 +1337,7 @@ if (edgeIndex >= 0) {
     $('#play-speed-value').text(playSpeed.toFixed(1));
     
     function setToolMode(mode) {
+        console.log('setToolMode called with mode:', mode);
         currentTool = mode;
         // Clear edge creation state when switching tools
         edgeStartNode = -1;
@@ -1343,6 +1357,7 @@ if (edgeIndex >= 0) {
         
         // Add active to current tool
         $('#btn-' + mode).addClass('active');
+        console.log('set active to #btn-' + mode);
         
         display();
     }
