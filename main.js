@@ -9,7 +9,6 @@ var VIEWS = 8;
 var info = 0;
 var INFOS = 2;
 
-
 // zoom state (simple scaling around origin)
 var scale = 1.0; // 1 = 100%
 
@@ -31,7 +30,6 @@ var traceBackMode = false; // Whether we're in trace-back mode
 var traceBackIndex = {}; // Store current playback position for each tracked vertex
 var traceDirection = -1; // -1 for backward, 1 for forward
 var traceLoopMode = true; // true = loop/bounce, false = play once
-
 
 // Tool mode
 var currentTool = 'add-select'; // 'add-node', 'select', 'add-edge', etc.
@@ -120,8 +118,8 @@ function attachSolidToOpen(solidIndex, openIndex) {
         // Push the old solid slightly away
         var openPos = link.vertices[openIndex];
         link.vertices[previousSolid] = [
-            openPos[0] + 20,
-            openPos[1] + 20
+            openPos[0] + 10,
+            openPos[1] + 10
         ];
     }
 
@@ -138,6 +136,46 @@ function attachSolidToOpen(solidIndex, openIndex) {
     link.vertices[solidIndex] = [
         link.vertices[openIndex][0],
         link.vertices[openIndex][1]
+    ];
+}
+function findAttachTargetForOpen(openIndex) {
+    var best = -1;
+    var bestD2 = ATTACH_DIST2;
+    _.each(link.vertices, function(v, j) {
+        if (j === openIndex) return;
+        if (!canAttachPair(openIndex, j)) return;
+        if (isOpenNode(j)) return; // target must be solid node
+        var d2 = dist2(link.vertices[openIndex], link.vertices[j]);
+        if (d2 <= bestD2) {
+            bestD2 = d2;
+            best = j;
+        }
+    });
+    return best;
+}
+function attachOpenToSolid(openIndex, solidIndex) {
+    var previousOpen = solidToOpen[solidIndex];
+    // If another open is already attached to this solid, displace it
+    if (previousOpen !== undefined && previousOpen !== openIndex) {
+        delete openToSolid[previousOpen];
+        // Push the old open slightly away
+        var solidPos = link.vertices[solidIndex];
+        link.vertices[previousOpen] = [
+            solidPos[0] + 20,
+            solidPos[1] + 20
+        ];
+    }
+    // If this open was attached somewhere else, clear that old socket
+    var previousSolid = openToSolid[openIndex];
+    if (previousSolid !== undefined && previousSolid !== solidIndex) {
+        delete solidToOpen[previousSolid];
+    }
+    solidToOpen[solidIndex] = openIndex;
+    openToSolid[openIndex] = solidIndex;
+    // Snap open directly into the solid node
+    link.vertices[openIndex] = [
+        link.vertices[solidIndex][0],
+        link.vertices[solidIndex][1]
     ];
 }
 
@@ -1219,6 +1257,10 @@ $(function() {
             } 
             else if (isOpenNode(i)) {
                 link.vertices[i] = [mousePos[0], mousePos[1]];
+                var target = findAttachTargetForOpen(i);
+                if (target >= 0) {
+                    attachOpenToSolid(i, target);
+                }
             } 
             else {
                 link.vertices[i] = mousePos;
