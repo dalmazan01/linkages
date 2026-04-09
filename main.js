@@ -557,14 +557,25 @@ function display() {
         if (i == curVertex || !(view & 2)) {
             // Determine node style (individual or global)
             var thisNodeStyle = (i in openNodes) ? (openNodes[i] ? 'open' : 'filled') : nodeStyle;
-            
+            var selectedLabel = (curVertex >= 0) ? (nodeNames[curVertex] || String.fromCharCode(65 + curVertex)) : null;
+            var thisLabel = nodeNames[i] || String.fromCharCode(65 + i);
+            var selectedStyle = (curVertex in openNodes) ? (openNodes[curVertex] ? 'open' : 'filled') : nodeStyle;
+            var isComplementary = selectedLabel !== null && i !== curVertex && selectedLabel === thisLabel && selectedStyle !== thisNodeStyle;
+
+            if (isComplementary) {
+                c.save();
+                c.beginPath();
+                c.arc(v[0], v[1], VERTEX_SIZE * 1.4, 0, 2 * Math.PI);
+                c.fillStyle = 'rgba(255, 210, 80, 0.45)';
+                c.fill();
+                c.restore();
+            }
             
             // Highlight nodes in add-edge mode
             if (currentTool == 'add-edge'){
                 if (i == edgeStartNode){
                     // Start node -> SUPER BRIGHT glow (multiple layers)
                     c.save();
-                    
                     
                     // Outer glow layer
                     c.shadowBlur = 30;
@@ -601,6 +612,10 @@ function display() {
                     // Hover node - cyan
                     c.fillStyle = colorString(0, 1, 1);
                     c.strokeStyle = colorString(0, 1, 1);
+                } else if (isComplementary) {
+                    // Complementary nodes keep a white fill/sroke with a halo.
+                    c.fillStyle = colorString(1, 1, 1);
+                    c.strokeStyle = colorString(1, 1, 1);
                 } else {
                     c.fillStyle = colorString (1, 1, 1); //white
                     c.strokeStyle = colorString (1, 1, 1);
@@ -608,6 +623,10 @@ function display() {
             } else if (i == curVertex){
                 c.fillStyle = colorString (0, 0.5, 1); //blue when selected
                 c.strokeStyle = colorString(0, 0.5, 1);
+            }
+            else if (isComplementary) {
+                c.fillStyle = colorString(1,1,1); // white for same-name nodes
+                c.strokeStyle = colorString(1,1,1);
             }
             else{
                 c.fillStyle = colorString(1,1,1); // white for normal nodes
