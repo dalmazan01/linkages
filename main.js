@@ -9,6 +9,7 @@ var VIEWS = 8;
 var info = 0;
 var INFOS = 2;
 
+
 // zoom state (simple scaling around origin)
 var scale = 1.0; // 1 = 100%
 
@@ -31,6 +32,7 @@ var traceBackIndex = {}; // Store current playback position for each tracked ver
 var traceDirection = -1; // -1 for backward, 1 for forward
 var traceLoopMode = true; // true = loop/bounce, false = play once
 
+
 // Tool mode
 var currentTool = 'add-select'; // 'add-node', 'select', 'add-edge', etc.
 var appMode = 'edit'; // 'edit' or 'play' mode
@@ -41,6 +43,13 @@ var edgeNames = {}; // Custom names for edges {index: "name"}
 
 // Individual node styles
 var openNodes = {}; // Track which specific nodes are open {index: true/false}
+
+
+//Keeps track of which nodes are attached
+var solidToOpen = {}; // solid index -> open index : where is solid attached
+var openToSolid = {}; // open index -> solid index : which solid is currently occupying open node
+//distance nodes can be near before they snap together
+var ATTACH_DIST2 = 225; // 15 px squared
 
 // Drag state
 var isDragging = false;
@@ -68,6 +77,140 @@ var undoStack = [];
 var redoStack = [];
 var MAX_UNDO = 50;
 
+//helps nodes/vertices snap together
+function dist2(a, b) {
+    var dx = a[0] - b[0];
+    var dy = a[1] - b[1];
+    return dx * dx + dy * dy;
+}
+function findAttachTarget(solidIndex) {
+    var best = -1;
+    var bestD2 = ATTACH_DIST2;
+
+    _.each(link.vertices, function(v, j) {
+        if (j === solidIndex) return;
+        if (!canAttachPair(solidIndex, j)) return;
+        if (!isOpenNode(j)) return; // target must be open node
+
+        var d2 = dist2(link.vertices[solidIndex], link.vertices[j]);
+        if (d2 <= bestD2) {
+            bestD2 = d2;
+            best = j;
+        }
+    });
+
+    return best;
+}
+
+function detachSolid(solidIndex) {
+    var openIndex = solidToOpen[solidIndex];
+    if (openIndex !== undefined) {
+        delete openToSolid[openIndex];
+        delete solidToOpen[solidIndex];
+    }
+}
+
+function attachSolidToOpen(solidIndex, openIndex) {
+    var previousSolid = openToSolid[openIndex];
+
+    // If another solid is already in this open node, force it out
+    if (previousSolid !== undefined && previousSolid !== solidIndex) {
+        delete solidToOpen[previousSolid];
+    
+        // Push the old solid slightly away
+        var openPos = link.vertices[openIndex];
+        link.vertices[previousSolid] = [
+            openPos[0] + 20,
+            openPos[1] + 20
+        ];
+    }
+
+    // If this solid was attached somewhere else, clear that old socket
+    var previousOpen = solidToOpen[solidIndex];
+    if (previousOpen !== undefined && previousOpen !== openIndex) {
+        delete openToSolid[previousOpen];
+    }
+
+    solidToOpen[solidIndex] = openIndex;
+    openToSolid[openIndex] = solidIndex;
+
+    // Snap solid directly into the open node
+    link.vertices[solidIndex] = [
+        link.vertices[openIndex][0],
+        link.vertices[openIndex][1]
+    ];
+}
+
+function syncAttachedVertices() {
+    enforceAttachments();
+}
+
+function enforceAttachments() {
+    _.each(solidToOpen, function(openIndex, solidIndex) {
+        solidIndex = parseInt(solidIndex, 10);
+
+        var openPos = link.vertices[openIndex];
+        var solidPos = link.vertices[solidIndex];
+
+        // Average them so both constraints are respected
+        var mid = [
+            0.5 * (openPos[0] + solidPos[0]),
+            0.5 * (openPos[1] + solidPos[1])
+        ];
+
+        link.vertices[openIndex] = [mid[0], mid[1]];
+        link.vertices[solidIndex] = [mid[0], mid[1]];
+    });
+}
+
+function solveJointedSystem(iterations) {
+    iterations = iterations || 10;
+
+    for (var k = 0; k < iterations; k++) {
+        link.correctEdgeLengths();  // enforce edge lengths
+        enforceAttachments();       // enforce joint coincidence
+    }
+}
+
+function getDragGroup(i) {
+    if (solidToOpen[i] !== undefined) {
+        // dragging solid -> move its open partner too
+        return {
+            solid: i,
+            open: solidToOpen[i]
+        };
+    }
+
+    if (openToSolid[i] !== undefined) {
+        // dragging open -> move its solid partner too
+        return {
+            solid: openToSolid[i],
+            open: i
+        };
+    }
+
+    return null;
+}
+
+//compares vertice names with star and without
+function getBaseNodeName(i) {
+    return nodeNames[i] || String.fromCharCode(65 + i);
+}
+
+//open and solid with the same name
+function isOpenNode(i) {
+    return (i in openNodes) ? openNodes[i] : (nodeStyle === 'open');
+}
+function canAttachPair(i, j) {
+    if (getBaseNodeName(i) !== getBaseNodeName(j)) return false;
+
+    var iOpen = isOpenNode(i);
+    var jOpen = isOpenNode(j);
+
+    return iOpen !== jOpen; // exactly one open and one solid
+}
+
+
 function makeSnapshot() {
     return {
         vertices  : link.vertices.map(function(v) { return [v[0], v[1]]; }),
@@ -82,7 +225,9 @@ function makeSnapshot() {
         angles    : link.angles.map(function(a) { return {i: a.i, j: a.j, k: a.k}; }),
         nodeNames : $.extend({}, nodeNames),
         edgeNames : $.extend({}, edgeNames),
-        openNodes : $.extend({}, openNodes)
+        openNodes : $.extend({}, openNodes),
+        solidToOpen : $.extend({}, solidToOpen),
+        openToSolid : $.extend({}, openToSolid)
     };
 }
 
@@ -94,8 +239,76 @@ function restoreSnapshot(snapshot) {
     nodeNames     = snapshot.nodeNames;
     edgeNames     = snapshot.edgeNames;
     openNodes     = snapshot.openNodes;
+    solidToOpen   = snapshot.solidToOpen || {};
+    openToSolid   = snapshot.openToSolid || {};
     curVertex = undefined;
     curEdge   = undefined;
+}
+
+//helps fix edges length
+function getEdgeTargetLength(e) {
+    if (typeof e.length !== 'undefined') return e.length;
+    return numeric.norm2(numeric.sub(link.vertices[e.j], link.vertices[e.i]));
+}
+
+function getFixedNeighborConstraints(i) {
+    var constraints = [];
+
+    _.each(link.edges, function(e) {
+        var fixedIndex = -1;
+
+        if (e.i === i && link.fixed.indexOf(e.j) >= 0) {
+            fixedIndex = e.j;
+        } else if (e.j === i && link.fixed.indexOf(e.i) >= 0) {
+            fixedIndex = e.i;
+        }
+
+        if (fixedIndex >= 0) {
+            constraints.push({
+                center: [link.vertices[fixedIndex][0], link.vertices[fixedIndex][1]],
+                radius: getEdgeTargetLength(e)
+            });
+        }
+    });
+
+    return constraints;
+}
+
+function projectToCircle(center, radius, point) {
+    var dx = point[0] - center[0];
+    var dy = point[1] - center[1];
+    var d = Math.sqrt(dx * dx + dy * dy);
+
+    if (d > 1e-9) {
+        return [
+            center[0] + dx * radius / d,
+            center[1] + dy * radius / d
+        ];
+    }
+
+    return [center[0] + radius, center[1]];
+}
+
+function constrainToFixedNeighbors(indices, desiredPos) {
+    var constrained = [desiredPos[0], desiredPos[1]];
+    var constraints = [];
+
+    _.each(indices, function(i) {
+        constraints = constraints.concat(getFixedNeighborConstraints(i));
+    });
+
+    if (constraints.length === 0) {
+        return constrained;
+    }
+
+    // Iterate a few times so the point satisfies all fixed-neighbor circles
+    for (var iter = 0; iter < 6; iter++) {
+        _.each(constraints, function(c) {
+            constrained = projectToCircle(c.center, c.radius, constrained);
+        });
+    }
+
+    return constrained;
 }
 
 function saveHistory() {
@@ -142,6 +355,8 @@ function reset() {
     curVertex = undefined;
     curEdge = undefined;
     attractor = undefined;
+    solidToOpen = {};
+    openToSolid = {};
     tracks = {};
     nodeNames = {}; // Clear custom node names
     edgeNames = {}; // Clear custom edge names
@@ -209,6 +424,7 @@ function display() {
     canvas.attr('height', canvas.height());
     var c = canvas[0].getContext('2d');
     c.clearRect(0, 0, canvas.width, canvas.height);
+    syncAttachedVertices();
 
     // draw DOF text unscaled so it remains legible
     if (!(info & 1)) {
@@ -292,6 +508,7 @@ function display() {
     }
 
     _.each(link.vertices, function(v, i) {
+        var skipNormalFill = false;
         var b = i == curVertex ? 1 : 0;
         var isFixed = link.fixed.indexOf(i) != -1;
         var r = isFixed ? 1 : 0;
@@ -314,22 +531,28 @@ function display() {
                     c.shadowColor = '#00ff00';
                     c.fillStyle = colorString(0, 1, 0);
                     c.strokeStyle = colorString(0, 1, 0);
-                    fillPoint(c, v, thisNodeStyle);
+                    if (!skipNormalFill) {
+                        fillPoint(c, v, thisNodeStyle);
+                    }
                     
                     // Middle glow layer
                     c.shadowBlur = 20;
                     c.shadowColor = '#00ff00';
-                    fillPoint(c, v, thisNodeStyle);
+                    if (!skipNormalFill) {
+                        fillPoint(c, v, thisNodeStyle);
+                    }
                     
                     // Inner bright core
                     c.shadowBlur = 10;
                     c.shadowColor = '#00ff00';
-                    fillPoint(c, v, thisNodeStyle);
+                    if (!skipNormalFill) {
+                        fillPoint(c, v, thisNodeStyle);
+                    }
                     
                     c.restore();
                     
                     // Skip the normal fillPoint below
-                    var skipNormalFill = true;
+                    skipNormalFill = true;
 
                     // Add glow effect
                     c.shadowBlur = 40;
@@ -344,15 +567,6 @@ function display() {
                 } 
             } else if (i == curVertex){
                 c.fillStyle = colorString (0, 0.5, 1); //blue when selected
-                c.strokeStyle = colorString(0, 0.5, 1);
-            }
-            else{
-                c.fillStyle = colorString(1,1,1); // white for normal nodes
-                c.strokeStyle = colorString(1,1,1);
-            }
-
-            if(i == curVertex){
-                c.fillStyle = colorString(0, 0.5, 1); // blue when selected
                 c.strokeStyle = colorString(0, 0.5, 1);
             }
             else{
@@ -375,13 +589,18 @@ function display() {
                 c.fillText('📍', v[0] + 8, v[1] - 8);
             }
             
-            // Draw node label (use custom name if available)
             if (showLabels) {
                 c.fillStyle = colorString(1, 1, 1); // White labels
                 c.font = 'bold 12px Arial';
-                var label = nodeNames[i] || String.fromCharCode(65 + i); // Custom or A, B, C, etc.
+            
+                // Base name only
+                var baseName = nodeNames[i] || String.fromCharCode(65 + i);
+            
+                // Automatically add * for open nodes
+                var label = (thisNodeStyle === 'open') ? (baseName + '*') : baseName;
+            
                 c.fillText(label, v[0] - 15, v[1] - 15);
-                
+            
                 // Store label position for click detection (invisible)
                 // We'll handle this in mouse events
             }
@@ -833,8 +1052,7 @@ function idle() {
             });
 
             // Correct edge length drift from finite step integration
-            link.correctEdgeLengths();
-            
+            solveJointedSystem(10);
             update();
         }
     }
@@ -905,11 +1123,6 @@ $(function() {
                 isDragging = true;
                 dragVertex = picked.vertex;
                 curVertex = picked.vertex;
-
-                // Attractor lives in world coordinates (same space as link.vertices)
-                var w = screenToWorld(x, y);
-                attractor = [w[0], w[1]];
-
                 display();
             } else if (picked.edge >= 0) {
                 curEdge = picked.edge;
@@ -989,29 +1202,50 @@ $(function() {
             return;
         }
 
-        // Dragging a node: set an attractor at the cursor and let the
-        // rigidity projection in idle() move the linkage along allowed DOF.
+        // Drag attached/free nodes
         if (isDragging && dragVertex >= 0) {
             var w = screenToWorld(x, y);
-            attractor = [w[0], w[1]];
-            curVertex = dragVertex;
-            display();
+            var mousePos = [w[0], w[1]];
+            var i = dragVertex;
+        
+            curVertex = i;
+        
+            var group = getDragGroup(i);
+        
+            if (group) {
+                // Move BOTH together freely
+                link.vertices[group.open] = [mousePos[0], mousePos[1]];
+                link.vertices[group.solid] = [mousePos[0], mousePos[1]];
+            } 
+            else if (isOpenNode(i)) {
+                link.vertices[i] = [mousePos[0], mousePos[1]];
+            } 
+            else {
+                link.vertices[i] = mousePos;
+        
+                var target = findAttachTarget(i);
+                if (target >= 0) {
+                    attachSolidToOpen(i, target);
+                }
+            }
+        
+            
+            solveJointedSystem(10);
+        
+            update();
         }
-
         // Edge creation preview
         else if (currentTool === 'add-edge' && edgeStartNode >= 0) {
             var w = screenToWorld(x, y);
             var wx = w[0];
             var wy = w[1];
-            // Find nearest node to snap to
+
             var nearestNode = findNearestNode(wx, wy);
-            
+
             if (nearestNode >= 0 && nearestNode !== edgeStartNode) {
-                // Snap to node
                 edgePreviewEnd = link.vertices[nearestNode];
                 edgeSnapNode = nearestNode;
             } else {
-                // Follow mouse
                 edgePreviewEnd = [wx, wy];
                 edgeSnapNode = -1;
             }
@@ -1019,13 +1253,14 @@ $(function() {
         }
 
         // Preview node in add-node mode
-        else if(currentTool === 'add-node'){
+        else if (currentTool === 'add-node') {
             var w = screenToWorld(x, y);
             previewNodePosition = [w[0], w[1]];
             display();
         }
-        else{
-            if(previewNodePosition !== null){
+
+        else {
+            if (previewNodePosition !== null) {
                 previewNodePosition = null;
                 display();
             }
@@ -1576,7 +1811,7 @@ if (edgeIndex >= 0) {
             if (!isNaN(newLength) && newLength > 0) {
                 saveHistory();
                 link.edges[edgeIndex].length = newLength;
-                link.correctEdgeLengths();
+                solveJointedSystem(10);
                 update();
                 $('#edge-context-menu').hide();
             } else {
