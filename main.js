@@ -1149,14 +1149,6 @@ $(function() {
             return;
         }
 
-        // Space+click for panning
-        if (spacePressed) {
-            isPanDragging = true;
-            lastPanMouseX = x;
-            lastPanMouseY = y;
-            return;
-        }
-
         // Start constrained drag ONLY in select/play mode.
         // Other tools (add-node/add-edge/delete/label) rely on mouseup handlers.
         if (currentTool === 'select' || appMode === 'play') {
@@ -1173,12 +1165,26 @@ $(function() {
                 dragVertex = picked.vertex;
                 curVertex = picked.vertex;
                 display();
+                return;
             } else if (picked.edge >= 0) {
                 curEdge = picked.edge;
                 curVertex = undefined;
                 display();
+                return;
             }
+
+            // Click-and-hold on empty space for panning
+            isPanDragging = true;
+            lastPanMouseX = x;
+            lastPanMouseY = y;
+            return;
         }
+
+        // Click-and-hold anywhere for panning (non-select/play modes)
+        isPanDragging = true;
+        lastPanMouseX = x;
+        lastPanMouseY = y;
+        return;
     });
 
 // Mouse up - stop dragging or handle clicks
@@ -1450,11 +1456,12 @@ if (edgeIndex >= 0) {
         event.preventDefault();
         
         // Get scroll direction (negative = scroll down/zoom out, positive = scroll up/zoom in)
-        var delta = event.originalEvent.deltaY < 0 ? 1.2 : 0.833; // 1/1.2 ≈ 0.833
+        var delta = event.originalEvent.deltaY < 0 ? 1.1 : 0.833; // 1/1.1 ≈ 0.909
         
         scale = Math.max(0.1, Math.min(10, scale * delta));
         display();
     });
+    
 
     // Limited keyboard controls - only backspace for delete
     $(window).keydown(function(event) {
