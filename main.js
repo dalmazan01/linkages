@@ -404,6 +404,45 @@ function reset() {
     edgeSnapNode = -1;
 }
 
+function shiftNodeData(deletedIndex) {
+    // Helper to shift standard maps (keys are indices)
+    function shiftDict(dict) {
+        var newDict = {};
+        _.each(dict, function(val, key) {
+            var idx = parseInt(key, 10);
+            if (idx !== deletedIndex) {
+                newDict[idx < deletedIndex ? idx : idx - 1] = val;
+            }
+        });
+        return newDict;
+    }
+
+    // Apply to our state objects
+    tracks = shiftDict(tracks);
+    nodeNames = shiftDict(nodeNames);
+    openNodes = shiftDict(openNodes);
+
+    // Helper to shift paired attachment maps (both keys AND values are indices)
+    function shiftPairs(dict) {
+        var newDict = {};
+        _.each(dict, function(val, key) {
+            var idx = parseInt(key, 10);
+            var targetIdx = parseInt(val, 10);
+            
+            // If either node in the pair was deleted, drop the connection
+            if (idx !== deletedIndex && targetIdx !== deletedIndex) {
+                var newIdx = idx < deletedIndex ? idx : idx - 1;
+                var newTarget = targetIdx < deletedIndex ? targetIdx : targetIdx - 1;
+                newDict[newIdx] = newTarget;
+            }
+        });
+        return newDict;
+    }
+
+    solidToOpen = shiftPairs(solidToOpen);
+    openToSolid = shiftPairs(openToSolid);
+}
+
 var VELOCITY_COEFF = 1;
 var VELOCITY_MAG = 1;
 
@@ -949,22 +988,14 @@ function keypress(key) {
         display();
     }
 
-    else if (key == 'd') {
-        if (curVertex >= 0) {
-            if (curVertex in tracks) {
-                var oldTracks = tracks;
-                tracks = {};
-                _.each(oldTracks, function(track, i) {
-                    if (i != curVertex)
-                        tracks[i < curVertex ? i : i-1] = track;
-                });
-            }
-
+    else if (key == 'd'){
+        if (curVertex >= 0){
+            shiftNodeData(curVertex); // Use our new helper
             link.removeVertex(curVertex);
             curVertex = undefined;
             update();
         }
-        else if (curEdge >= 0) {
+        else if (curEdge >= 0){
             link.removeEdge(curEdge);
             curEdge = undefined;
             update();
@@ -1149,6 +1180,14 @@ $(function() {
             return;
         }
 
+        // Space+click for panning
+        if (spacePressed) {
+            isPanDragging = true;
+            lastPanMouseX = x;
+            lastPanMouseY = y;
+            return;
+        }
+
         // Start constrained drag ONLY in select/play mode.
         // Other tools (add-node/add-edge/delete/label) rely on mouseup handlers.
         if (currentTool === 'select' || appMode === 'play') {
@@ -1165,26 +1204,12 @@ $(function() {
                 dragVertex = picked.vertex;
                 curVertex = picked.vertex;
                 display();
-                return;
             } else if (picked.edge >= 0) {
                 curEdge = picked.edge;
                 curVertex = undefined;
                 display();
-                return;
             }
-
-            // Click-and-hold on empty space for panning
-            isPanDragging = true;
-            lastPanMouseX = x;
-            lastPanMouseY = y;
-            return;
         }
-
-        // Click-and-hold anywhere for panning (non-select/play modes)
-        isPanDragging = true;
-        lastPanMouseX = x;
-        lastPanMouseY = y;
-        return;
     });
 
 // Mouse up - stop dragging or handle clicks
@@ -1456,12 +1481,11 @@ if (edgeIndex >= 0) {
         event.preventDefault();
         
         // Get scroll direction (negative = scroll down/zoom out, positive = scroll up/zoom in)
-        var delta = event.originalEvent.deltaY < 0 ? 1.1 : 0.833; // 1/1.1 ≈ 0.909
+        var delta = event.originalEvent.deltaY < 0 ? 1.2 : 0.833; // 1/1.2 ≈ 0.833
         
         scale = Math.max(0.1, Math.min(10, scale * delta));
         display();
     });
-    
 
     // Limited keyboard controls - only backspace for delete
     $(window).keydown(function(event) {
@@ -1506,14 +1530,7 @@ if (edgeIndex >= 0) {
             if (curVertex !== undefined && curVertex >= 0) {
                 // Delete vertex
                 saveHistory();
-                if (curVertex in tracks) {
-                    var oldTracks = tracks;
-                    tracks = {};
-                    _.each(oldTracks, function(track, i) {
-                        if (i != curVertex)
-                            tracks[i < curVertex ? i : i-1] = track;
-                    });
-                }
+                shiftNodeData(curVertex); // Use our new helper
                 link.removeVertex(curVertex);
                 curVertex = undefined;
                 update();
@@ -1763,14 +1780,7 @@ if (edgeIndex >= 0) {
         if (curVertex !== undefined && curVertex >= 0) {
             // Delete vertex
             saveHistory();
-            if (curVertex in tracks) {
-                var oldTracks = tracks;
-                tracks = {};
-                _.each(oldTracks, function(track, i) {
-                    if (i != curVertex)
-                        tracks[i < curVertex ? i : i-1] = track;
-                });
-            }
+            shiftNodeData(curVertex); // Use our new helper
             link.removeVertex(curVertex);
             curVertex = undefined;
             update();
