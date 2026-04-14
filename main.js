@@ -406,7 +406,6 @@ function reset() {
 
 var VELOCITY_COEFF = 1;
 var VELOCITY_MAG = 1;
-var playSpeed = 1.0; // slider-driven speed multiplier
 
 var VERTEX_SIZE = 10;
 var LINE_WIDTH = 4;
@@ -416,6 +415,9 @@ var PICK_DIST2 = 100;
 var ATTRACT_DIST2 = 25;
 var TRACK_LENGTH = 1024;
 var TRACK_DIST2 = 4;
+
+var OCCUPIED_OPEN_RING_RADIUS = 9;   // bigger than filled node radius (5)
+var OCCUPIED_OPEN_RING_WIDTH = 2;
 
 function normalized(v) {
     return numeric.div(v, numeric.norm2(v));
@@ -428,19 +430,27 @@ function strokeLine(c, u, v) {
     c.stroke();
 }
 
-function fillPoint(c, v, style) {
+function fillPoint(c, v, style, nodeIndex) {
     // Use individual node style if specified, otherwise use global nodeStyle
     var drawStyle = style || nodeStyle;
     
     if (drawStyle === 'open') {
-        // Draw hollow circle
+        // If this open node currently contains a solid node,
+        // draw a larger ring around it with a small gap.
+        var radius = (nodeIndex !== undefined && openToSolid[nodeIndex] !== undefined)
+            ? OCCUPIED_OPEN_RING_RADIUS
+            : VERTEX_SIZE / 2;
+
         c.beginPath();
-        c.arc(v[0], v[1], VERTEX_SIZE/2, 0, 2 * Math.PI);
+        c.lineWidth = (nodeIndex !== undefined && openToSolid[nodeIndex] !== undefined)
+            ? OCCUPIED_OPEN_RING_WIDTH
+            : 2;
+        c.arc(v[0], v[1], radius, 0, 2 * Math.PI);
         c.stroke();
     } else {
         // Draw filled circle
         c.beginPath();
-        c.arc(v[0], v[1], VERTEX_SIZE/2, 0, 2 * Math.PI);
+        c.arc(v[0], v[1], VERTEX_SIZE / 2, 0, 2 * Math.PI);
         c.fill();
     }
 }
@@ -637,7 +647,7 @@ function display() {
                 c.lineWidth = 2;
             }
             
-            fillPoint(c, v, thisNodeStyle);
+            fillPoint(c, v, thisNodeStyle, i);
             // Reset shadow after drawing
             c.shadowBlur = 0;
 
@@ -1617,20 +1627,6 @@ if (edgeIndex >= 0) {
             setToolMode('select');
         }
     });
-
-    $('#play-speed-slider').on('input change', function() {
-        var newSpeed = parseFloat($(this).val());
-        if (isNaN(newSpeed) || newSpeed <= 0) newSpeed = 1.0;
-
-        playSpeed = newSpeed;
-        VELOCITY_COEFF = playSpeed;
-        VELOCITY_MAG = 1.0;
-        $('#play-speed-value').text(playSpeed.toFixed(1));
-    });
-
-    // Initialize slider display in case the default is changed above
-    $('#play-speed-slider').val(playSpeed);
-    $('#play-speed-value').text(playSpeed.toFixed(1));
     
     function setToolMode(mode) {
         console.log('setToolMode called with mode:', mode);
