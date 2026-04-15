@@ -570,7 +570,19 @@ function display() {
         if (i == curVertex || !(view & 2)) {
             // Determine node style (individual or global)
             var thisNodeStyle = (i in openNodes) ? (openNodes[i] ? 'open' : 'filled') : nodeStyle;
-            
+            var selectedLabel = (curVertex >= 0) ? getBaseNodeName(curVertex) : null;
+            var thisLabel = getBaseNodeName(i);
+            var selectedStyle = (curVertex in openNodes) ? (openNodes[curVertex] ? 'open' : 'filled') : nodeStyle;
+            var isComplementary = selectedLabel !== null && i !== curVertex && selectedLabel === thisLabel && selectedStyle !== thisNodeStyle;
+
+            if (isComplementary) {
+                c.save();
+                c.beginPath();
+                c.arc(v[0], v[1], VERTEX_SIZE * 1.4, 0, 2 * Math.PI);
+                c.fillStyle = 'rgba(255, 210, 80, 0.45)';
+                c.fill();
+                c.restore();
+            }
             
             // Highlight nodes in add-edge mode
             if (currentTool == 'add-edge'){
