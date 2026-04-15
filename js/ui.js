@@ -42,13 +42,25 @@ $(function() {
 		if (currentTool === 'select' || appMode === 'play') {
 			picked = pick(x, y); // pick() already accounts for scale
 			if (picked.vertex >= 0) {
-				// Don't drag fixed vertices
-				if (link.fixed.indexOf(picked.vertex) >= 0) {
+				
+				// BUG FIX: Check if this node OR its attached partner is pinned
+				var isNodeFixed = link.fixed.indexOf(picked.vertex) >= 0;
+				var group = getDragGroup(picked.vertex);
+				if (group) {
+					if (link.fixed.indexOf(parseInt(group.solid, 10)) >= 0 || 
+					    link.fixed.indexOf(parseInt(group.open, 10)) >= 0) {
+						isNodeFixed = true;
+					}
+				}
+
+				// Don't drag if the node (or its partner) is fixed
+				if (isNodeFixed) {
 					curVertex = picked.vertex;
 					curEdge = undefined;
 					display();
 					return;
 				}
+                
 				isDragging = true;
 				dragVertex = picked.vertex;
 				curVertex = picked.vertex;
@@ -142,9 +154,20 @@ $(function() {
 			var group = getDragGroup(i);
 
 			if (group) {
-				// Move BOTH together freely
-				link.vertices[group.open] = [mousePos[0], mousePos[1]];
-				link.vertices[group.solid] = [mousePos[0], mousePos[1]];
+				// BUG FIX: Check if either node in the attached group is pinned
+				var isGroupFixed = link.fixed.indexOf(parseInt(group.solid, 10)) >= 0 || 
+				                   link.fixed.indexOf(parseInt(group.open, 10)) >= 0;
+
+				if (isGroupFixed) {
+					// The group contains a pinned node! 
+					// Force the drag to stop immediately so it locks securely in place.
+					isDragging = false;
+					dragVertex = -1;
+				} else {
+					// Neither is pinned, move BOTH together freely
+					link.vertices[group.open] = [mousePos[0], mousePos[1]];
+					link.vertices[group.solid] = [mousePos[0], mousePos[1]];
+				}
 			}
 			else if (isOpenNode(i)) {
 				link.vertices[i] = [mousePos[0], mousePos[1]];
