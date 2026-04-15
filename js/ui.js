@@ -55,9 +55,6 @@ $(function() {
 
 				// Don't drag if the node (or its partner) is fixed
 				if (isNodeFixed) {
-					curVertex = picked.vertex;
-					curEdge = undefined;
-					display();
 					return;
 				}
                 
