@@ -182,7 +182,7 @@ $(function() {
 				}
 			}
 
-			solveJointedSystem(10);
+			solveJointedSystem(20);
 			update();
 		}
 		// Edge creation preview
@@ -723,7 +723,7 @@ $(function() {
 				openNodes[curVertex] = (nodeStyle === 'filled');
 			}
 	
-			solveJointedSystem(10);
+			solveJointedSystem(20);
 			update();
 		} else {
 			alert('Please select a node first by clicking on it.');
@@ -739,7 +739,7 @@ $(function() {
 			if (!isNaN(newLength) && newLength > 0) {
 				saveHistory();
 				link.edges[edgeIndex].length = newLength;
-				solveJointedSystem(10);
+				solveJointedSystem(20);
 				update();
 				$('#edge-context-menu').hide();
 			} else {
