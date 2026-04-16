@@ -677,6 +677,11 @@ $(function() {
 			saveHistory();
 			reset();
 			link = PRESETS[presetIndex].copy();
+            
+			// NEW FIX: Restore the global node names and styles if the preset has them
+			nodeNames = $.extend({}, PRESETS[presetIndex].presetNodeNames || {});
+			openNodes = $.extend({}, PRESETS[presetIndex].presetOpenNodes || {});
+            
 			update();
 		}
 	});
