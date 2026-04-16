@@ -713,16 +713,18 @@ $(function() {
 	});
 
 	// Toggle individual node open/closed
-	$('#btn-toggle-node-open').click(function() {
+	$('#btn-toggle-node-edit, #btn-toggle-node-play').click(function() {
 		if (curVertex !== undefined && curVertex >= 0) {
-			// Toggle the selected node's open/closed state
+			saveHistory();
+	
 			if (curVertex in openNodes) {
 				openNodes[curVertex] = !openNodes[curVertex];
 			} else {
-				// If not set, toggle from current global default
 				openNodes[curVertex] = (nodeStyle === 'filled');
 			}
-			display();
+	
+			solveJointedSystem(10);
+			update();
 		} else {
 			alert('Please select a node first by clicking on it.');
 		}
