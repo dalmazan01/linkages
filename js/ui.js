@@ -273,7 +273,7 @@ $(function() {
 
 		if (nodeIndex >= 0) {
 			// Rename node
-			var currentName = nodeNames[nodeIndex] || String.fromCharCode(65 + nodeIndex);
+			var currentName = nodeNames[nodeIndex] || '?';
 			var newName = prompt('Enter new name for node:', currentName);
 			if (newName !== null && newName.trim() !== '') {
 				nodeNames[nodeIndex] = newName.trim();

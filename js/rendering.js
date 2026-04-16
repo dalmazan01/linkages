@@ -257,7 +257,7 @@ function display() {
                 c.font = 'bold 12px Arial';
             
                 // Base name only
-                var baseName = nodeNames[i] || String.fromCharCode(65 + i);
+                var baseName = nodeNames[i] || '?';
             
                 // Automatically add * for open nodes
                 var label = (thisNodeStyle === 'open') ? (baseName + '*') : baseName;

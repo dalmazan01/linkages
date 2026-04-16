@@ -81,6 +81,10 @@ function mouseleft(x, y) {
         if (currentTool === 'add-node') {
             saveHistory();
             link.vertices.push([wx, wy]);
+        
+            var newIndex = link.vertices.length - 1;
+            nodeNames[newIndex] = getNextAutoNodeName();
+        
             update();
         }
         // Otherwise just deselect
