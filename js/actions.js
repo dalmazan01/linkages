@@ -1,7 +1,6 @@
 /**
  * actions.js
  * Core actions, picks, and keyboard-style commands.
- * Split from the original monolithic main.js for readability.
  */
 
 function pick(x, y) {

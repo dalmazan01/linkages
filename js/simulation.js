@@ -1,7 +1,6 @@
 /**
  * simulation.js
  * Animation loop, resize handling, and rigidity updates.
- * Split from the original monolithic main.js for readability.
  */
 
 var resized = false;

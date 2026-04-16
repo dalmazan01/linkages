@@ -1,7 +1,6 @@
 /**
  * rendering.js
  * Rendering constants and canvas drawing logic.
- * Split from the original monolithic main.js for readability.
  */
 
 var VELOCITY_MAG = 1;
