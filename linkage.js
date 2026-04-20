@@ -49,9 +49,18 @@ function Linkage() {
         });
 
         this.edges = $.map(this.edges, function(e) {
-            if (e.i != i0 && e.j != i0)
-                return {i: e.i < i0 ? e.i : e.i-1,
-                        j: e.j < i0 ? e.j : e.j-1};
+            if (e.i != i0 && e.j != i0) {
+                var newEdge = {
+                    i: e.i < i0 ? e.i : e.i - 1,
+                    j: e.j < i0 ? e.j : e.j - 1
+                };
+        
+                if (typeof e.length !== 'undefined') {
+                    newEdge.length = e.length;
+                }
+        
+                return newEdge;
+            }
         });
 
         this.angles = $.map(this.angles, function(a) {
