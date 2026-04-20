@@ -1,7 +1,6 @@
 /**
  * app-state.js
  * Application state, shared globals, attachments, snapshots, and history.
- * Split from the original monolithic main.js for readability.
  */
 
 var link = new Linkage();
@@ -192,18 +191,31 @@ function syncAttachedVertices() {
 function enforceAttachments() {
     _.each(solidToOpen, function(openIndex, solidIndex) {
         solidIndex = parseInt(solidIndex, 10);
+        openIndex = parseInt(openIndex, 10); // Ensure this is also an integer
 
         var openPos = link.vertices[openIndex];
         var solidPos = link.vertices[solidIndex];
 
-        // Average them so both constraints are respected
-        var mid = [
-            0.5 * (openPos[0] + solidPos[0]),
-            0.5 * (openPos[1] + solidPos[1])
-        ];
+        // Check if either of the attached nodes are pinned
+        var openFixed = link.fixed.indexOf(openIndex) !== -1;
+        var solidFixed = link.fixed.indexOf(solidIndex) !== -1;
 
-        link.vertices[openIndex] = [mid[0], mid[1]];
-        link.vertices[solidIndex] = [mid[0], mid[1]];
+        if (solidFixed && !openFixed) {
+            // Solid is fixed, force open to snap to solid
+            link.vertices[openIndex] = [solidPos[0], solidPos[1]];
+        } else if (openFixed && !solidFixed) {
+            // Open is fixed, force solid to snap to open
+            link.vertices[solidIndex] = [openPos[0], openPos[1]];
+        } else {
+            // Neither is fixed (or both are), average them so both constraints are respected
+            var mid = [
+                0.5 * (openPos[0] + solidPos[0]),
+                0.5 * (openPos[1] + solidPos[1])
+            ];
+
+            link.vertices[openIndex] = [mid[0], mid[1]];
+            link.vertices[solidIndex] = [mid[0], mid[1]];
+        }
     });
 }
 

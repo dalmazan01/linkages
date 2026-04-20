@@ -1,45 +1,69 @@
-var PRESETS = [
-    $.extend(new Linkage(), {
-        name: 'basic',
-        vertices: [[100, 100],
-                   [200, 100],
-                   [200, 200]],
-        fixed: [1],
-        edges: [{i: 0, j: 1},
-                {i: 1, j: 2}],
-        angles: []
-    }),
+var PRESETS = [];
 
-    $.extend(new Linkage(), {
-        name: 'Watt',
-        vertices: [[63.999999999999694, 300.99999999999977], [264.76193054669005, 424.47670765539044], [297.32431625141692, 269.52156653324812], [523.0, 313.0], [281.62190416645717, 343.45112112484475]],
-        fixed: [3, 0],
-        edges: [{i: 2, j: 3},
-                {i: 0, j: 1},
-                {i: 1, j: 4},
-                {i: 2, j: 4}],
-        angles: [{i: 4, j: 1, k: 2}],
-    }),
+var defaultPreset = new Linkage();
+// ... your original default vertices and edges ...
+PRESETS.push(defaultPreset);
 
-    $.extend(new Linkage(), {
-        name: 'Peaucellier',
-        vertices: [[50.0, 300.0], [150.0, 300.0], [250.0, 300.0], [400.0, 400.0], [400.0, 200.0], [550.0, 300.0]],
-        fixed: [0, 1],
-        edges: [{i: 0, j: 3},
-                {i: 0, j: 4},
-                {i: 1, j: 2},
-                {i: 2, j: 3},
-                {i: 2, j: 4},
-                {i: 3, j: 5},
-                {i: 4, j: 5}],
-        angles: [],
-    }),
+// PRESET 1: Steric Example
+var stericPreset = new Linkage();
 
+stericPreset.vertices = [
+    [538.94, 276.41],  // Node 0 
+    [788.94, 275.62],  // Node 1 (Fixed)
+    [1038.92, 278.99], // Node 2 
+    [537.93, 551.41],  // Node 3 (Solid, "a")
+    [790.11, 550.62],  // Node 4 (Open, "a")
+    [1033.23, 528.92]  // Node 5 (Solid, "a")
 ];
 
-$(function() {
-    var ol = $('#presets');
-    _.each(PRESETS, function(preset) {
-        ol.append('<li>' + preset.name + '</li>');
-    });
-});
+stericPreset.fixed = [1];
+
+stericPreset.edges = [
+    { i: 0, j: 1, length: 250 },
+    { i: 1, j: 2, length: 250 },
+    { i: 2, j: 5, length: 275 },
+    { i: 1, j: 4, length: 275 },
+    { i: 0, j: 3, length: 275 }
+];
+
+// Custom Metadata for UI labels and open/closed states
+stericPreset.presetNodeNames = { 3: "a", 4: "a", 5: "a" };
+stericPreset.presetOpenNodes = { 3: false, 4: true, 5: false };
+
+PRESETS.push(stericPreset);
+
+
+// PRESET 2: Allosteric Example 
+var allostericPreset = new Linkage();
+
+allostericPreset.vertices = [
+    [486.11, 419.10],  // Node 0 ("A")
+    [1074.70, 430.31], // Node 1 ("C")
+    [783.03, 286.95],  // Node 2 ("D")
+    [777.78, 562.46],  // Node 3 ("B")
+    [783.24, 486.95],  // Node 4 (Open, "B")
+    [874.71, 431.72]   // Node 5 (Open, "A")
+];
+
+allostericPreset.fixed = []; // No fixed pins in this one!
+
+allostericPreset.edges = [
+    { i: 0, j: 2, length: 325 },
+    { i: 0, j: 3, length: 325 },
+    { i: 1, j: 2, length: 325 },
+    { i: 1, j: 3, length: 325 },
+    { i: 2, j: 4, length: 200 },
+    { i: 1, j: 5, length: 200 }
+];
+
+// Custom Metadata for UI labels and open/closed states
+allostericPreset.presetNodeNames = { 
+    0: "A", 1: "C", 2: "D", 
+    3: "B", 4: "B", 5: "A" 
+};
+allostericPreset.presetOpenNodes = { 
+    0: false, 1: false, 2: false, 
+    3: false, 4: true,  5: true 
+};
+
+PRESETS.push(allostericPreset);

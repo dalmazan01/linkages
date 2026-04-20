@@ -92,6 +92,11 @@
             <span class="btn-label">Add Edge</span>
           </button>
           
+          <button id="btn-toggle-node-edit" class="toolbar-btn" title="Toggle selected node open/closed">
+            <span class="btn-icon">◐</span>
+            <span class="btn-label">Toggle Node</span>
+          </button>
+          
           <button id="btn-delete" class="toolbar-btn" title="Delete selected element">
             <span class="btn-icon">🗑</span>
             <span class="btn-label">Delete</span>
@@ -139,17 +144,18 @@
         <div class="toolbar-section">
           <h3 class="toolbar-title">Presets</h3>
           
-          <button class="toolbar-btn preset-btn" data-preset="0">
-            <span class="btn-label">Basic</span>
-          </button>
-          
           <button class="toolbar-btn preset-btn" data-preset="1">
-            <span class="btn-label">Watt</span>
+            <span class="btn-label">Steric</span>
           </button>
           
           <button class="toolbar-btn preset-btn" data-preset="2">
-            <span class="btn-label">Peaucellier</span>
+            <span class="btn-label">Allosteric</span>
           </button>
+          
+          <button class="toolbar-btn preset-btn" data-preset="3">
+            <span class="btn-label">Catalysis</span>
+          </button>
+
         </div>
         
         <div class="toolbar-separator-h"></div>
@@ -177,7 +183,7 @@
             <span class="btn-label">Fix Node</span>
           </button>
           
-          <button id="btn-toggle-node-open" class="toolbar-btn" title="Toggle selected node open/closed">
+          <button id="btn-toggle-node-play" class="toolbar-btn" title="Toggle selected node open/closed">
             <span class="btn-icon">◐</span>
             <span class="btn-label">Toggle Node</span>
           </button>

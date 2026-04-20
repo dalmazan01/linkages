@@ -1,7 +1,6 @@
 /**
  * rendering.js
  * Rendering constants and canvas drawing logic.
- * Split from the original monolithic main.js for readability.
  */
 
 var VELOCITY_MAG = 1;
@@ -68,10 +67,24 @@ function colorString(r, g, b) {
 function display() {
     var num = numeric;
     var canvas = $('#canvas');
+    
+    // BUG FIX 1: Calculate the exact remaining screen space to prevent cutoff on large monitors
+    var offsetTop = canvas.offset() ? canvas.offset().top : 0;
+    var newHeight = window.innerHeight - offsetTop;
+    
+    // Force the CSS height to stretch to the exact bottom of the monitor
+    canvas.css('height', newHeight + 'px');
+    
+    // Sync the internal rendering resolution to the stretched CSS size
     canvas.attr('width', canvas.width());
     canvas.attr('height', canvas.height());
+
     var c = canvas[0].getContext('2d');
-    c.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // BUG FIX 2: 'canvas' is a jQuery object, so 'canvas.width' returned a function, not a number!
+    // We must use canvas[0].width and canvas[0].height to get the real pixel values.
+    c.clearRect(0, 0, canvas[0].width, canvas[0].height);
+
     syncAttachedVertices();
 
     // draw DOF text unscaled so it remains legible
@@ -135,18 +148,22 @@ function display() {
     }
 
     c.strokeStyle = colorString(0, 0.5, 0);
-    _.each(tracks, function(track) {
+    _.each(tracks, function(track)
+    {
         c.beginPath();
-        _.each(track, function(v, i) {
+        _.each(track, function(v, i)
+        {
             if (i == 0) c.moveTo(v[0], v[1]);
             else c.lineTo(v[0], v[1]);
         });
         c.stroke();
     });
 
-    if (!(view & 1)) {
+    if (!(view & 1))
+    {
         var n = allVelocities.length;
-        _.each(allVelocities, function(velocities, k) {
+        _.each(allVelocities, function(velocities, k)
+        {
             velocities = num.mul(VECTOR_LENGTH, velocities);
             c.strokeStyle = colorString(0, (k + 1) / n, 0);
             _.each(link.vertices, function(v, i) {
@@ -166,13 +183,11 @@ function display() {
             // Determine node style (individual or global)
             var thisNodeStyle = (i in openNodes) ? (openNodes[i] ? 'open' : 'filled') : nodeStyle;
             
-            
             // Highlight nodes in add-edge mode
             if (currentTool == 'add-edge'){
                 if (i == edgeStartNode){
                     // Start node -> SUPER BRIGHT glow (multiple layers)
                     c.save();
-                    
                     
                     // Outer glow layer
                     c.shadowBlur = 30;
@@ -273,5 +288,3 @@ function display() {
     // undo scale transform
     c.restore();
 }
-
-// XML SAVE / LOAD
