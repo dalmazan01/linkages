@@ -1,12 +1,14 @@
 /**
  * app-state.js
  * Application state, shared globals, attachments, snapshots, and history.
+ * Split from the original monolithic main.js for readability.
  */
 
 var link = new Linkage();
 var allVelocities = [];
 var curVertex;
 var curEdge;
+var selectedVertices = [];
 var attractor;
 var tracks = {};
 var view = 0;
