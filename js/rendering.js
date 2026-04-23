@@ -270,6 +270,51 @@ function display() {
         }
     });
 
+    // Highlight complementary nodes (open and closed nodes of the same name) with yellow halo
+    if (showLabels) {
+        // Build a map of node names to find complementary pairs
+        var nameToNodes = {};
+        _.each(link.vertices, function(v, i) {
+            if (i == curVertex || !(view & 2)) {
+                var baseName = nodeNames[i] || String.fromCharCode(65 + i);
+                var thisNodeStyle = (i in openNodes) ? (openNodes[i] ? 'open' : 'filled') : nodeStyle;
+                
+                if (!nameToNodes[baseName]) {
+                    nameToNodes[baseName] = [];
+                }
+                nameToNodes[baseName].push({index: i, style: thisNodeStyle, pos: v});
+            }
+        });
+        
+        // Find complementary pairs (same name, different style) and draw yellow halo
+        _.each(nameToNodes, function(nodes, name) {
+            var hasOpen = false;
+            var hasClosed = false;
+            _.each(nodes, function(n) {
+                if (n.style === 'open') hasOpen = true;
+                else hasClosed = true;
+            });
+            
+            // If both open and closed versions exist, draw yellow halo
+            if (hasOpen && hasClosed) {
+                _.each(nodes, function(n) {
+                    // Skip highlighting the currently selected node
+                    if (curVertex !== undefined && n.index === curVertex) return;
+                    
+                    c.save();
+                    c.shadowBlur = 15;
+                    c.shadowColor = 'rgba(255, 255, 0, 0.8)';
+                    c.strokeStyle = 'rgba(255, 255, 0, 0.8)';
+                    c.lineWidth = 3;
+                    c.beginPath();
+                    c.arc(n.pos[0], n.pos[1], VERTEX_SIZE + 5, 0, 2 * Math.PI);
+                    c.stroke();
+                    c.restore();
+                });
+            }
+        });
+    }
+
     if (attractor) {
         c.fillStyle = colorString(0.5, 0.5, 0.5)
         fillPoint(c, attractor);
