@@ -8,6 +8,7 @@ var link = new Linkage();
 var allVelocities = [];
 var curVertex;
 var curEdge;
+var selectedVertices = [];
 var attractor;
 var tracks = {};
 var view = 0;

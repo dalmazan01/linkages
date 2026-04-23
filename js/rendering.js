@@ -229,8 +229,9 @@ function display() {
                     c.fillStyle = colorString (1, 1, 1); //white
                     c.strokeStyle = colorString (1, 1, 1);
                 } 
-            } else if (i == curVertex){
-                c.fillStyle = colorString (0, 0.5, 1); //blue when selected
+            } else if (i == curVertex || selectedVertices.indexOf(i) >= 0) {
+                // NEW: Highlight blue if it's the curVertex OR in the selectedVertices array
+                c.fillStyle = colorString(0, 0.5, 1);
                 c.strokeStyle = colorString(0, 0.5, 1);
             }
             else{

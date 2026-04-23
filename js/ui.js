@@ -482,6 +482,10 @@ $(function() {
 
 	function setToolMode(mode) {
 		currentTool = mode;
+
+		if (mode !== 'select-multiple') {
+			selectedVertices = [];
+		}
 		// Clear edge creation state when switching tools
 		edgeStartNode = -1;
 		edgePreviewEnd = null;
@@ -525,6 +529,10 @@ $(function() {
 
 	$('#btn-add-edge').click(function() {
 		setToolMode('add-edge');
+	});
+
+	$('#btn-select-multi').click(function() {
+		setToolMode('select-multiple');
 	});
 
 	$('#btn-label').click(function() {
@@ -644,10 +652,22 @@ $(function() {
 	});
 
 	$('#btn-delete').click(function() {
-		if (curVertex !== undefined && curVertex >= 0) {
-			// Delete vertex
+		if (selectedVertices.length > 0) {
+			// BULK DELETE
 			saveHistory();
-			shiftNodeData(curVertex); // Use our new helper
+			// Sort descending to avoid index shifting issues during deletion
+			var sorted = selectedVertices.slice().sort(function(a, b){ return b - a; });
+			_.each(sorted, function(v) {
+				shiftNodeData(v);
+				link.removeVertex(v);
+			});
+			selectedVertices = [];
+			curVertex = undefined;
+			update();
+		} else if (curVertex !== undefined && curVertex >= 0) {
+			// Delete single vertex
+			saveHistory();
+			shiftNodeData(curVertex); 
 			link.removeVertex(curVertex);
 			curVertex = undefined;
 			update();
@@ -658,7 +678,6 @@ $(function() {
 			curEdge = undefined;
 			update();
 		}
-		// silently do nothing if nothing selected
 	});
 
 	$('#btn-clear').click(function() {
@@ -714,17 +733,26 @@ $(function() {
 
 	// Toggle individual node open/closed
 	$('#btn-toggle-node-open').click(function() {
-		if (curVertex !== undefined && curVertex >= 0) {
-			// Toggle the selected node's open/closed state
+		if (selectedVertices.length > 0) {
+			// BULK TOGGLE
+			_.each(selectedVertices, function(v) {
+				if (v in openNodes) {
+					openNodes[v] = !openNodes[v];
+				} else {
+					openNodes[v] = (nodeStyle === 'filled');
+				}
+			});
+			display();
+		} else if (curVertex !== undefined && curVertex >= 0) {
+			// Single toggle
 			if (curVertex in openNodes) {
 				openNodes[curVertex] = !openNodes[curVertex];
 			} else {
-				// If not set, toggle from current global default
 				openNodes[curVertex] = (nodeStyle === 'filled');
 			}
 			display();
 		} else {
-			alert('Please select a node first by clicking on it.');
+			alert('Please select a node first.');
 		}
 	});
 

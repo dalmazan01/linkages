@@ -68,6 +68,21 @@ function mouseleft(x, y) {
         return;
     }
 
+    if (currentTool === 'select-multiple') {
+        if (picked.vertex >= 0) {
+            var idx = selectedVertices.indexOf(picked.vertex);
+            if (idx >= 0) {
+                // Node is already selected, remove it
+                selectedVertices.splice(idx, 1);
+            } else {
+                // Node is not selected, add it
+                selectedVertices.push(picked.vertex);
+            }
+            display();
+        }
+        return;
+    }
+
     if (picked.vertex >= 0 || picked.edge >= 0) {
         if (picked.vertex == curVertex)
             delete picked.vertex; // clicking cur deselects
