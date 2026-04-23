@@ -271,47 +271,49 @@ function display() {
     });
 
     // Highlight complementary nodes (open and closed nodes of the same name) with yellow halo
-    if (showLabels) {
-        // Build a map of node names to find complementary pairs
-        var nameToNodes = {};
+    // Only when a node is selected
+    if (showLabels && curVertex !== undefined) {
+        // Get the name and style of the selected node
+        var selectedName = nodeNames[curVertex] || String.fromCharCode(65 + curVertex);
+        var selectedStyle = (curVertex in openNodes) ? (openNodes[curVertex] ? 'open' : 'filled') : nodeStyle;
+        
+        // Find complementary nodes (same name, different style)
+        var complementaryNodes = [];
         _.each(link.vertices, function(v, i) {
-            if (i == curVertex || !(view & 2)) {
+            if (i !== curVertex && (i == curVertex || !(view & 2))) {
                 var baseName = nodeNames[i] || String.fromCharCode(65 + i);
                 var thisNodeStyle = (i in openNodes) ? (openNodes[i] ? 'open' : 'filled') : nodeStyle;
                 
-                if (!nameToNodes[baseName]) {
-                    nameToNodes[baseName] = [];
+                if (baseName === selectedName && thisNodeStyle !== selectedStyle) {
+                    complementaryNodes.push({index: i, style: thisNodeStyle, pos: v});
                 }
-                nameToNodes[baseName].push({index: i, style: thisNodeStyle, pos: v});
             }
         });
         
-        // Find complementary pairs (same name, different style) and draw yellow halo
-        _.each(nameToNodes, function(nodes, name) {
-            var hasOpen = false;
-            var hasClosed = false;
-            _.each(nodes, function(n) {
-                if (n.style === 'open') hasOpen = true;
-                else hasClosed = true;
+        // Highlight each complementary node
+        _.each(complementaryNodes, function(n) {
+            // Check if this complementary node is connected to another complementary node
+            var isConnectedToComplementary = _.some(link.edges, function(e) {
+                if (e.i === n.index || e.j === n.index) {
+                    var otherIndex = (e.i === n.index) ? e.j : e.i;
+                    var otherName = nodeNames[otherIndex] || String.fromCharCode(65 + otherIndex);
+                    return otherName === selectedName;
+                }
+                return false;
             });
             
-            // If both open and closed versions exist, draw yellow halo
-            if (hasOpen && hasClosed) {
-                _.each(nodes, function(n) {
-                    // Skip highlighting the currently selected node
-                    if (curVertex !== undefined && n.index === curVertex) return;
-                    
-                    c.save();
-                    c.shadowBlur = 15;
-                    c.shadowColor = 'rgba(255, 255, 0, 0.8)';
-                    c.strokeStyle = 'rgba(255, 255, 0, 0.8)';
-                    c.lineWidth = 3;
-                    c.beginPath();
-                    c.arc(n.pos[0], n.pos[1], VERTEX_SIZE + 5, 0, 2 * Math.PI);
-                    c.stroke();
-                    c.restore();
-                });
-            }
+            // Use green halo if connected to complementary node, yellow otherwise
+            var haloColor = isConnectedToComplementary ? 'rgba(0, 255, 0, 0.8)' : 'rgba(255, 255, 0, 0.8)';
+            
+            c.save();
+            c.shadowBlur = 15;
+            c.shadowColor = haloColor;
+            c.strokeStyle = haloColor;
+            c.lineWidth = 3;
+            c.beginPath();
+            c.arc(n.pos[0], n.pos[1], VERTEX_SIZE + 5, 0, 2 * Math.PI);
+            c.stroke();
+            c.restore();
         });
     }
 
