@@ -53,6 +53,7 @@ body {
     z-index: 1000;
     box-shadow: -2px 0 10px rgba(0, 0, 0, 0.3);
     overflow-y: auto;
+    transition: width 0.25s ease, padding 0.25s ease;
 }
 
 .toolbar-section {
@@ -207,7 +208,7 @@ body {
 }
 
 #canvas {
-    width: calc(100% - 200px);
+    width: calc(100% - 230px);
     height: 100%;
     margin: 0;
     touch-action: none; /* allow custom pan/zoom gestures */
@@ -269,4 +270,35 @@ body {
 
 #edge-context-menu button:active {
     transform: translateY(0);
+}
+
+/* Sidebar collapsed state */
+body.sidebar-collapsed #toolbar {
+    width: 0;
+    padding-left: 0;
+    padding-right: 0;
+    overflow: hidden;
+}
+
+/* Canvas expands when sidebar is hidden */
+body.sidebar-collapsed #canvas {
+    width: 100%;
+}
+
+#btn-sidebar-toggle {
+    position: fixed;
+    top: 15px;
+    right: 215px;
+    z-index: 1100;
+    background: #1a1a2e;
+    color: white;
+    border: 1px solid #4fc3f7;
+    border-radius: 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: right 0.25s ease;
+}
+
+body.sidebar-collapsed #btn-sidebar-toggle {
+    right: 15px;
 }

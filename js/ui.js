@@ -459,6 +459,21 @@ $(function() {
 		display();
 	});
 
+	$('#btn-sidebar-toggle').click(function() {
+		document.body.classList.toggle('sidebar-collapsed');
+	
+		if (document.body.classList.contains('sidebar-collapsed')) {
+			$(this).text('☰');
+			$(this).attr('title', 'Expand sidebar');
+		} else {
+			$(this).text('✕');
+			$(this).attr('title', 'Collapse sidebar');
+		}
+	
+		resized = true;
+		display();
+	});
+
 	// Initialize the theme when the page loads
 	document.body.setAttribute('data-theme', currentTheme);
 
