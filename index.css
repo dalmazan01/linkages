@@ -104,6 +104,51 @@ body {
     box-shadow: 0 0 15px rgba(79, 195, 247, 0.3);
 }
 
+/* Container (keeps your toolbar style but tighter) */
+.toggle-switch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 8px 12px;  /* smaller than normal buttons */
+}
+
+/* Label text */
+.toggle-label {
+    font-size: 13px;
+}
+
+/* Track (the pill background) */
+.toggle-track {
+    width: 40px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    position: relative;
+    transition: background 0.2s ease;
+}
+
+/* Thumb (the circle) */
+.toggle-thumb {
+    width: 16px;
+    height: 16px;
+    background: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    transition: all 0.2s ease;
+}
+
+/* ACTIVE STATE (when dark mode is ON for example) */
+#btn-theme-toggle.active .toggle-track {
+    background: #4fc3f7;
+}
+
+#btn-theme-toggle.active .toggle-thumb {
+    transform: translateX(20px);
+}
+
 .toolbar-btn.danger {
     background: rgba(244, 67, 54, 0.2);
     border-color: rgba(244, 67, 54, 0.4);

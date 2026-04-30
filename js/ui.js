@@ -446,16 +446,27 @@ $(function() {
 	});
 
 	$('#btn-theme-toggle').click(function() {
-		currentTheme = currentTheme === 'light' ? 'dark' : 'light';
-		
-		// This applies the CSS variables
-		$('html').attr('data-theme', currentTheme);
-		
-		// This forces the canvas to redraw with the new colors
+		const btn = this;
+	
+		const isDark = currentTheme === 'dark';
+
+		currentTheme = isDark ? 'light' : 'dark';
+	
+		document.body.setAttribute('data-theme', currentTheme);
+	
+		btn.classList.toggle("active", currentTheme ==="dark");
+
 		display();
 	});
+
 	// Initialize the theme when the page loads
-	$('html').attr('data-theme', currentTheme);
+	document.body.setAttribute('data-theme', currentTheme);
+
+	const btn = document.getElementById("btn-theme-toggle");
+
+	if (currentTheme === "dark") {
+		btn.classList.add("active");
+	}
 
 	$('#btn-zoom-out').click(function() {
 		scale = Math.max(0.1, scale / 1.2);
