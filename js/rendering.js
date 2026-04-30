@@ -64,7 +64,6 @@ function colorString(r, g, b) {
     return '#' + colorComponent(r) + colorComponent(g) + colorComponent(b);
 }
 
-
 function display() {
     var num = numeric;
     var canvas = $('#canvas');

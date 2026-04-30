@@ -16,6 +16,8 @@ var VIEWS = 8;
 var info = 0;
 var INFOS = 2;
 
+var currentTheme = 'dark';
+
 // zoom state (simple scaling around origin)
 var scale = 1.0; // 1 = 100%
 

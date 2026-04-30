@@ -444,6 +444,19 @@ $(function() {
 		scale = Math.min(10, scale * 1.2);
 		display();
 	});
+
+	$('#btn-theme-toggle').click(function() {
+		currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+		
+		// This applies the CSS variables
+		$('html').attr('data-theme', currentTheme);
+		
+		// This forces the canvas to redraw with the new colors
+		display();
+	});
+	// Initialize the theme when the page loads
+	$('html').attr('data-theme', currentTheme);
+
 	$('#btn-zoom-out').click(function() {
 		scale = Math.max(0.1, scale / 1.2);
 		display();
