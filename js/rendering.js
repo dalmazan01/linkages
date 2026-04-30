@@ -79,6 +79,59 @@ function colorString(r, g, b) {
     return '#' + colorComponent(r) + colorComponent(g) + colorComponent(b);
 }
 
+function drawGrid(c, width, height) {
+    var smallGrid = 15;
+    var bigGrid = 75;
+
+    c.save();
+
+    // background
+    c.fillStyle = currentTheme === 'dark' ? '#111111' : '#eeeeee';
+    c.fillRect(0, 0, width, height);
+
+    // small grid lines
+    c.strokeStyle = currentTheme === 'dark'
+        ? 'rgba(255, 255, 255, 0.08)'
+        : 'rgba(0, 0, 0, 0.08)';
+    c.lineWidth = 1;
+
+    for (var x = 0; x <= width; x += smallGrid) {
+        c.beginPath();
+        c.moveTo(x, 0);
+        c.lineTo(x, height);
+        c.stroke();
+    }
+
+    for (var y = 0; y <= height; y += smallGrid) {
+        c.beginPath();
+        c.moveTo(0, y);
+        c.lineTo(width, y);
+        c.stroke();
+    }
+
+    // bigger grid lines
+    c.strokeStyle = currentTheme === 'dark'
+        ? 'rgba(255, 255, 255, 0.18)'
+        : 'rgba(0, 0, 0, 0.18)';
+    c.lineWidth = 1;
+
+    for (var bx = 0; bx <= width; bx += bigGrid) {
+        c.beginPath();
+        c.moveTo(bx, 0);
+        c.lineTo(bx, height);
+        c.stroke();
+    }
+
+    for (var by = 0; by <= height; by += bigGrid) {
+        c.beginPath();
+        c.moveTo(0, by);
+        c.lineTo(width, by);
+        c.stroke();
+    }
+
+    c.restore();
+}
+
 function display() {
     var num = numeric;
     var canvas = $('#canvas');
@@ -99,6 +152,8 @@ function display() {
     // BUG FIX 2: 'canvas' is a jQuery object, so 'canvas.width' returned a function, not a number!
     // We must use canvas[0].width and canvas[0].height to get the real pixel values.
     c.clearRect(0, 0, canvas[0].width, canvas[0].height);
+
+    drawGrid(c, canvas[0].width, canvas[0].height);
 
     syncAttachedVertices();
 
