@@ -33,6 +33,9 @@ function fillPoint(c, v, style, nodeIndex) {
     // Use individual node style if specified, otherwise use global nodeStyle
     var drawStyle = style || nodeStyle;
     
+    // Check if the current node is pinned (fixed)
+    var isFixed = (nodeIndex !== undefined && link.fixed.indexOf(nodeIndex) !== -1);
+
     if (drawStyle === 'open') {
         // If this open node currently contains a solid node,
         // draw a larger ring around it with a small gap.
@@ -44,16 +47,28 @@ function fillPoint(c, v, style, nodeIndex) {
         c.lineWidth = (nodeIndex !== undefined && openToSolid[nodeIndex] !== undefined)
             ? OCCUPIED_OPEN_RING_WIDTH
             : 2;
-        c.arc(v[0], v[1], radius, 0, 2 * Math.PI);
+        
+        // Draw a square if fixed, otherwise a circle
+        if (isFixed) {
+            c.rect(v[0] - radius, v[1] - radius, radius * 2, radius * 2);
+        } else {
+            c.arc(v[0], v[1], radius, 0, 2 * Math.PI);
+        }
         c.stroke();
     } else {
-        // Draw filled circle
+        // Draw filled shape
         c.beginPath();
-        c.arc(v[0], v[1], VERTEX_SIZE / 2, 0, 2 * Math.PI);
+        var radius = VERTEX_SIZE / 2;
+        
+        // Draw a square if fixed, otherwise a circle
+        if (isFixed) {
+            c.rect(v[0] - radius, v[1] - radius, radius * 2, radius * 2);
+        } else {
+            c.arc(v[0], v[1], radius, 0, 2 * Math.PI);
+        }
         c.fill();
     }
 }
-
 function colorComponent(x) {
     x = Math.round(255 * x).toString(16);
     if (x.length < 2) x = '0' + x;
@@ -234,8 +249,13 @@ function display() {
                 c.strokeStyle = colorString(0, 0.5, 1);
             }
             else{
-                c.fillStyle = colorString(1,1,1); // white for normal nodes
-                c.strokeStyle = colorString(1,1,1);
+                if (currentTheme === 'light') {
+                    c.fillStyle = colorString(0, 0, 0); 
+                    c.strokeStyle = colorString(0, 0, 0);
+                } else {
+                    c.fillStyle = colorString(1, 1, 1); 
+                    c.strokeStyle = colorString(1, 1, 1);
+                }
             }
             
             if (thisNodeStyle === 'open') {
@@ -247,14 +267,18 @@ function display() {
             c.shadowBlur = 0;
 
             // Draw fixed point indicator (pin icon)
-            if (isFixed && showLabels) {
-                c.fillStyle = colorString(1, 0.2, 0.2); // Red for fixed
-                c.font = 'bold 16px Arial';
-                c.fillText('📍', v[0] + 8, v[1] - 8);
-            }
+            //if (isFixed && showLabels) {
+            //    c.fillStyle = colorString(1, 0.2, 0.2); // Red for fixed
+            //    c.font = 'bold 16px Arial';
+            //    c.fillText('📍', v[0] + 8, v[1] - 8);
+            //}
             
             if (showLabels) {
-                c.fillStyle = colorString(1, 1, 1); // White labels
+                if (currentTheme === 'light') {
+                    c.fillStyle = colorString(0, 0, 0); // Black labels
+                } else {
+                    c.fillStyle = colorString(1, 1, 1); // White labels
+                }
                 c.font = 'bold 12px Arial';
             
                 // Base name only
