@@ -1,6 +1,7 @@
 /**
  * actions.js
  * Core actions, picks, and keyboard-style commands.
+ * Split from the original monolithic main.js for readability.
  */
 
 function pick(x, y) {
@@ -64,6 +65,21 @@ function mouseleft(x, y) {
     
         // In add-edge mode, ignore clicks (we handle mousedown/mouseup instead)
     if (currentTool === 'add-edge') {
+        return;
+    }
+
+    if (currentTool === 'select-multiple') {
+        if (picked.vertex >= 0) {
+            var idx = selectedVertices.indexOf(picked.vertex);
+            if (idx >= 0) {
+                // Node is already selected, remove it
+                selectedVertices.splice(idx, 1);
+            } else {
+                // Node is not selected, add it
+                selectedVertices.push(picked.vertex);
+            }
+            display();
+        }
         return;
     }
 
@@ -190,5 +206,3 @@ function keypress(key) {
         update();
     }
 }
-
-

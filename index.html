@@ -31,44 +31,10 @@
           <span class="btn-icon">✏️</span>
           <span class="btn-label">EDIT MODE</span>
         </button>
+        <button id="btn-theme-toggle" class="tool-button">
+        <span class="icon">🌓</span> Toggle Theme
+</button>
       </div>  
-      
-      <div class="toolbar-separator-h"></div>
-      
-      <!-- universal display controls (available in both modes) -->
-      <div class="toolbar-section">
-        <h3 class="toolbar-title">Display</h3>
-        <button id="btn-toggle-labels" class="toolbar-btn active" title="Show/hide node and edge labels">
-          <span class="btn-icon">🏷</span>
-          <span class="btn-label">Show Labels</span>
-        </button>
-        <button id="btn-toggle-lengths" class="toolbar-btn" title="Show/hide edge lengths">
-          <span class="btn-icon">🔢</span>
-          <span class="btn-label">Show Lengths</span>
-        </button>
-        <button id="btn-zoom-in" class="toolbar-btn" title="Zoom in">
-          <span class="btn-icon">🔍➕</span>
-          <span class="btn-label">Zoom In</span>
-        </button>
-        <button id="btn-zoom-out" class="toolbar-btn" title="Zoom out">
-          <span class="btn-icon">🔍➖</span>
-          <span class="btn-label">Zoom Out</span>
-        </button>
-      </div>
-      <!-- Hidden file input for XML upload -->
-      <input type="file" id="xml-file-input" accept=".xml" style="display:none;" />
-
-      <!-- Save button -->
-        <button id="btn-save-xml" class="toolbar-btn">
-          <span class="btn-icon">💾</span>
-          <span class="btn-label">Save XML</span>
-        </button>
-
-      <!-- Load button -->
-        <button id="btn-load-xml" class="toolbar-btn">
-          <span class="btn-icon">📂</span>
-          <span class="btn-label">Load XML</span>
-        </button>
       <div class="toolbar-separator-h"></div>
 
       <!-- EDIT MODE TOOLS (visible in edit mode) -->
@@ -82,6 +48,11 @@
             <span class="btn-label">Select</span>
           </button>
 
+          <button id="btn-select-multi" class="toolbar-btn">
+            <span class="icon">👆👆</span> 
+            <span class="btn-label">Select Multiple</span>
+          </button>
+
           <button id="btn-add-node" class="toolbar-btn " title="Click on canvas to add a node">
             <span class="btn-icon">●</span>
             <span class="btn-label">Add Node</span>
@@ -92,7 +63,7 @@
             <span class="btn-label">Add Edge</span>
           </button>
           
-          <button id="btn-toggle-node-edit" class="toolbar-btn" title="Toggle selected node open/closed">
+          <button id="btn-toggle-node-open" class="toolbar-btn" title="Toggle selected node open/closed">
             <span class="btn-icon">◐</span>
             <span class="btn-label">Toggle Node</span>
           </button>
@@ -117,8 +88,43 @@
             <span class="btn-label">Label</span>
           </button>
         </div>
-        
         <div class="toolbar-separator-h"></div>
+      
+      <!-- universal display controls (available in both modes) -->
+      <div class="toolbar-section">
+        <h3 class="toolbar-title">Display</h3>
+        <button id="btn-toggle-labels" class="toolbar-btn active" title="Show/hide node and edge labels">
+          <span class="btn-icon">🏷</span>
+          <span class="btn-label">Show Labels</span>
+        </button>
+        <button id="btn-toggle-lengths" class="toolbar-btn" title="Show/hide edge lengths">
+          <span class="btn-icon">🔢</span>
+          <span class="btn-label">Show Lengths</span>
+        </button>
+        <button id="btn-zoom-in" class="toolbar-btn" title="Zoom in">
+          <span class="btn-icon">➕</span>
+          <span class="btn-label">Zoom In</span>
+        </button>
+        <button id="btn-zoom-out" class="toolbar-btn" title="Zoom out">
+          <span class="btn-icon">➖</span>
+          <span class="btn-label">Zoom Out</span>
+        </button>
+      </div>
+      <!-- Hidden file input for XML upload -->
+      <input type="file" id="xml-file-input" accept=".xml" style="display:none;" />
+
+      <!-- Save button -->
+        <button id="btn-save-xml" class="toolbar-btn">
+          <span class="btn-icon">💾</span>
+          <span class="btn-label">Save XML</span>
+        </button>
+
+      <!-- Load button -->
+        <button id="btn-load-xml" class="toolbar-btn">
+          <span class="btn-icon">📂</span>
+          <span class="btn-label">Load XML</span>
+        </button>
+      <div class="toolbar-separator-h"></div>
         
         <div class="toolbar-section">
           <h3 class="toolbar-title">Trace Mode</h3>
@@ -183,7 +189,7 @@
             <span class="btn-label">Fix Node</span>
           </button>
           
-          <button id="btn-toggle-node-play" class="toolbar-btn" title="Toggle selected node open/closed">
+          <button id="btn-toggle-node-open" class="toolbar-btn" title="Toggle selected node open/closed">
             <span class="btn-icon">◐</span>
             <span class="btn-label">Toggle Node</span>
           </button>

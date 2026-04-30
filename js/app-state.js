@@ -1,18 +1,22 @@
 /**
  * app-state.js
  * Application state, shared globals, attachments, snapshots, and history.
+ * Split from the original monolithic main.js for readability.
  */
 
 var link = new Linkage();
 var allVelocities = [];
 var curVertex;
 var curEdge;
+var selectedVertices = [];
 var attractor;
 var tracks = {};
 var view = 0;
 var VIEWS = 8;
 var info = 0;
 var INFOS = 2;
+
+var currentTheme = 'dark';
 
 // zoom state (simple scaling around origin)
 var scale = 1.0; // 1 = 100%
