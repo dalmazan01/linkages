@@ -101,8 +101,16 @@ function display() {
     c.scale(scale, scale);
 
     _.each(link.edges, function(e, k) {
+        // Highlight edges connected to the dragged node
+        var isConnectedToDragged = (isDragging && dragVertex >= 0) && 
+                                   (e.i === dragVertex || e.j === dragVertex);
+        
         if (k == curEdge) c.strokeStyle = colorString(1, 0.3, 1);
+        else if (isConnectedToDragged) c.strokeStyle = colorString(1, 0.5, 0); // Brighter orange for dragged edges
         else c.strokeStyle = colorString(1, 0.3, 0);
+        
+        // Set line width - make dragged edges thicker for better visibility
+        c.lineWidth = isConnectedToDragged ? (LINE_WIDTH + 2) : LINE_WIDTH;
         strokeLine(c, link.vertices[e.i], link.vertices[e.j]);
         
         // Draw edge label (use custom name if available)
@@ -228,6 +236,20 @@ function display() {
                     c.fillStyle = colorString (1, 1, 1); //white
                     c.strokeStyle = colorString (1, 1, 1);
                 } 
+            } else if (i == dragVertex && isDragging) {
+                // DRAG HIGHLIGHT: Orange glow for dragged nodes
+                c.fillStyle = colorString(1, 0.6, 0); // Orange
+                c.strokeStyle = colorString(1, 0.6, 0);
+                
+                // Apply multi-layer glow effect for dragged node
+                c.save();
+                c.shadowBlur = 25;
+                c.shadowColor = 'rgba(255, 150, 0, 0.8)'; // Semi-transparent orange glow
+                fillPoint(c, v, thisNodeStyle, i);
+                c.restore();
+                
+                // Skip normal fill below since we already drew it with glow
+                skipNormalFill = true;
             } else if (i == curVertex){
                 c.fillStyle = colorString (0, 0.5, 1); //blue when selected
                 c.strokeStyle = colorString(0, 0.5, 1);
@@ -241,7 +263,10 @@ function display() {
                 c.lineWidth = 2;
             }
             
-            fillPoint(c, v, thisNodeStyle, i);
+            // Only call fillPoint if we haven't already drawn it with special effects
+            if (!skipNormalFill) {
+                fillPoint(c, v, thisNodeStyle, i);
+            }
             // Reset shadow after drawing
             c.shadowBlur = 0;
 
