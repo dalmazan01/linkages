@@ -1,6 +1,7 @@
 /**
  * actions.js
  * Core actions, picks, and keyboard-style commands.
+ * Split from the original monolithic main.js for readability.
  */
 
 function pick(x, y) {
@@ -67,6 +68,21 @@ function mouseleft(x, y) {
         return;
     }
 
+    if (currentTool === 'select-multiple') {
+        if (picked.vertex >= 0) {
+            var idx = selectedVertices.indexOf(picked.vertex);
+            if (idx >= 0) {
+                // Node is already selected, remove it
+                selectedVertices.splice(idx, 1);
+            } else {
+                // Node is not selected, add it
+                selectedVertices.push(picked.vertex);
+            }
+            display();
+        }
+        return;
+    }
+
     if (picked.vertex >= 0 || picked.edge >= 0) {
         if (picked.vertex == curVertex)
             delete picked.vertex; // clicking cur deselects
@@ -81,6 +97,10 @@ function mouseleft(x, y) {
         if (currentTool === 'add-node') {
             saveHistory();
             link.vertices.push([wx, wy]);
+        
+            var newIndex = link.vertices.length - 1;
+            nodeNames[newIndex] = getNextAutoNodeName();
+        
             update();
         }
         // Otherwise just deselect
@@ -186,5 +206,3 @@ function keypress(key) {
         update();
     }
 }
-
-

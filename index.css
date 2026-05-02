@@ -1,12 +1,40 @@
-html {
-    margin: 0;
-    padding: 0;
+
+:root {
+    --bg-color: #f4f4f5;
+    --toolbar-bg: #ffffff;
+    --text-color: #18181b;
+    --canvas-bg: #e4e4e7;
+    --border-color: #d4d4d8;
 }
 
 body {
-    margin: 0;
-    background-color: #131415;
-    overflow: hidden;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+
+[data-theme="dark"] {
+    --bg-color: #18181b;
+    --toolbar-bg: #27272a;
+    --text-color: #f4f4f5;
+    --canvas-bg: #000000;
+    --border-color: #3f3f46;
+}
+
+#canvas {
+    background-color: var(--canvas-bg);
+    /* If your canvas currently has a hardcoded background color, remove it! */
+}
+
+/* Example for your toolbar and buttons */
+.toolbar {
+    background-color: var(--toolbar-bg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.tool-button, .preset-btn {
+    color: var(--text-color);
+    background-color: var(--toolbar-bg);
+    border: 1px solid var(--border-color);
 }
 
 /* Right Sidebar Toolbar */
@@ -25,6 +53,7 @@ body {
     z-index: 1000;
     box-shadow: -2px 0 10px rgba(0, 0, 0, 0.3);
     overflow-y: auto;
+    transition: width 0.25s ease, padding 0.25s ease;
 }
 
 .toolbar-section {
@@ -74,6 +103,51 @@ body {
     background: rgba(23, 25, 26, 0.25);
     border-color: #4fc3f7;
     box-shadow: 0 0 15px rgba(79, 195, 247, 0.3);
+}
+
+/* Container (keeps your toolbar style but tighter) */
+.toggle-switch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 8px 12px;  /* smaller than normal buttons */
+}
+
+/* Label text */
+.toggle-label {
+    font-size: 13px;
+}
+
+/* Track (the pill background) */
+.toggle-track {
+    width: 40px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    position: relative;
+    transition: background 0.2s ease;
+}
+
+/* Thumb (the circle) */
+.toggle-thumb {
+    width: 16px;
+    height: 16px;
+    background: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    transition: all 0.2s ease;
+}
+
+/* ACTIVE STATE (when dark mode is ON for example) */
+#btn-theme-toggle.active .toggle-track {
+    background: #4fc3f7;
+}
+
+#btn-theme-toggle.active .toggle-thumb {
+    transform: translateX(20px);
 }
 
 .toolbar-btn.danger {
@@ -134,11 +208,8 @@ body {
 }
 
 #canvas {
-    position: absolute;
-    left: 0;
-    top: 0;
-    right: 200px;
-    bottom: 0;
+    width: calc(100% - 230px);
+    height: 100%;
     margin: 0;
     touch-action: none; /* allow custom pan/zoom gestures */
 }
@@ -199,4 +270,35 @@ body {
 
 #edge-context-menu button:active {
     transform: translateY(0);
+}
+
+/* Sidebar collapsed state */
+body.sidebar-collapsed #toolbar {
+    width: 0;
+    padding-left: 0;
+    padding-right: 0;
+    overflow: hidden;
+}
+
+/* Canvas expands when sidebar is hidden */
+body.sidebar-collapsed #canvas {
+    width: 100%;
+}
+
+#btn-sidebar-toggle {
+    position: fixed;
+    top: 15px;
+    right: 215px;
+    z-index: 1100;
+    background: #1a1a2e;
+    color: white;
+    border: 1px solid #4fc3f7;
+    border-radius: 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: right 0.25s ease;
+}
+
+body.sidebar-collapsed #btn-sidebar-toggle {
+    right: 15px;
 }

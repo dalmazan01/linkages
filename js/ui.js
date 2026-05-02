@@ -52,7 +52,6 @@ $(function() {
 						isNodeFixed = true;
 					}
 				}
-
 				// Don't drag if the node (or its partner) is fixed
 				if (isNodeFixed) {
 					return;
@@ -175,14 +174,13 @@ $(function() {
 			}
 			else {
 				link.vertices[i] = mousePos;
-
 				target = findAttachTarget(i);
 				if (target >= 0) {
 					attachSolidToOpen(i, target);
 				}
 			}
 
-			solveJointedSystem(20);
+			solveJointedSystem(10);
 			update();
 		}
 		// Edge creation preview
@@ -273,7 +271,7 @@ $(function() {
 
 		if (nodeIndex >= 0) {
 			// Rename node
-			var currentName = nodeNames[nodeIndex] || String.fromCharCode(65 + nodeIndex);
+			var currentName = nodeNames[nodeIndex] || '?';
 			var newName = prompt('Enter new name for node:', currentName);
 			if (newName !== null && newName.trim() !== '') {
 				nodeNames[nodeIndex] = newName.trim();
@@ -446,6 +444,45 @@ $(function() {
 		scale = Math.min(10, scale * 1.2);
 		display();
 	});
+
+	$('#btn-theme-toggle').click(function() {
+		const btn = this;
+	
+		const isDark = currentTheme === 'dark';
+
+		currentTheme = isDark ? 'light' : 'dark';
+	
+		document.body.setAttribute('data-theme', currentTheme);
+	
+		btn.classList.toggle("active", currentTheme ==="dark");
+
+		display();
+	});
+
+	$('#btn-sidebar-toggle').click(function() {
+		document.body.classList.toggle('sidebar-collapsed');
+	
+		if (document.body.classList.contains('sidebar-collapsed')) {
+			$(this).text('☰');
+			$(this).attr('title', 'Expand sidebar');
+		} else {
+			$(this).text('✕');
+			$(this).attr('title', 'Collapse sidebar');
+		}
+	
+		resized = true;
+		display();
+	});
+
+	// Initialize the theme when the page loads
+	document.body.setAttribute('data-theme', currentTheme);
+
+	const btn = document.getElementById("btn-theme-toggle");
+
+	if (currentTheme === "dark") {
+		btn.classList.add("active");
+	}
+
 	$('#btn-zoom-out').click(function() {
 		scale = Math.max(0.1, scale / 1.2);
 		display();
@@ -482,6 +519,10 @@ $(function() {
 
 	function setToolMode(mode) {
 		currentTool = mode;
+
+		if (mode !== 'select-multiple') {
+			selectedVertices = [];
+		}
 		// Clear edge creation state when switching tools
 		edgeStartNode = -1;
 		edgePreviewEnd = null;
@@ -525,6 +566,10 @@ $(function() {
 
 	$('#btn-add-edge').click(function() {
 		setToolMode('add-edge');
+	});
+
+	$('#btn-select-multi').click(function() {
+		setToolMode('select-multiple');
 	});
 
 	$('#btn-label').click(function() {
@@ -644,10 +689,22 @@ $(function() {
 	});
 
 	$('#btn-delete').click(function() {
-		if (curVertex !== undefined && curVertex >= 0) {
-			// Delete vertex
+		if (selectedVertices.length > 0) {
+			// BULK DELETE
 			saveHistory();
-			shiftNodeData(curVertex); // Use our new helper
+			// Sort descending to avoid index shifting issues during deletion
+			var sorted = selectedVertices.slice().sort(function(a, b){ return b - a; });
+			_.each(sorted, function(v) {
+				shiftNodeData(v);
+				link.removeVertex(v);
+			});
+			selectedVertices = [];
+			curVertex = undefined;
+			update();
+		} else if (curVertex !== undefined && curVertex >= 0) {
+			// Delete single vertex
+			saveHistory();
+			shiftNodeData(curVertex); 
 			link.removeVertex(curVertex);
 			curVertex = undefined;
 			update();
@@ -658,7 +715,6 @@ $(function() {
 			curEdge = undefined;
 			update();
 		}
-		// silently do nothing if nothing selected
 	});
 
 	$('#btn-clear').click(function() {
@@ -713,20 +769,27 @@ $(function() {
 	});
 
 	// Toggle individual node open/closed
-	$('#btn-toggle-node-edit, #btn-toggle-node-play').click(function() {
-		if (curVertex !== undefined && curVertex >= 0) {
-			saveHistory();
-	
+	$('#btn-toggle-node-open').click(function() {
+		if (selectedVertices.length > 0) {
+			// BULK TOGGLE
+			_.each(selectedVertices, function(v) {
+				if (v in openNodes) {
+					openNodes[v] = !openNodes[v];
+				} else {
+					openNodes[v] = (nodeStyle === 'filled');
+				}
+			});
+			display();
+		} else if (curVertex !== undefined && curVertex >= 0) {
+			// Single toggle
 			if (curVertex in openNodes) {
 				openNodes[curVertex] = !openNodes[curVertex];
 			} else {
 				openNodes[curVertex] = (nodeStyle === 'filled');
 			}
-	
-			solveJointedSystem(20);
-			update();
+			display();
 		} else {
-			alert('Please select a node first by clicking on it.');
+			alert('Please select a node first.');
 		}
 	});
 
@@ -739,7 +802,7 @@ $(function() {
 			if (!isNaN(newLength) && newLength > 0) {
 				saveHistory();
 				link.edges[edgeIndex].length = newLength;
-				solveJointedSystem(20);
+				solveJointedSystem(10);
 				update();
 				$('#edge-context-menu').hide();
 			} else {
