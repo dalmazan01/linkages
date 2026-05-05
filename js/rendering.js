@@ -33,6 +33,9 @@ function fillPoint(c, v, style, nodeIndex) {
     // Use individual node style if specified, otherwise use global nodeStyle
     var drawStyle = style || nodeStyle;
     
+    // Check if the current node is pinned (fixed)
+    var isFixed = (nodeIndex !== undefined && link.fixed.indexOf(nodeIndex) !== -1);
+
     if (drawStyle === 'open') {
         // If this open node currently contains a solid node,
         // draw a larger ring around it with a small gap.
@@ -44,16 +47,28 @@ function fillPoint(c, v, style, nodeIndex) {
         c.lineWidth = (nodeIndex !== undefined && openToSolid[nodeIndex] !== undefined)
             ? OCCUPIED_OPEN_RING_WIDTH
             : 2;
-        c.arc(v[0], v[1], radius, 0, 2 * Math.PI);
+
+        // Draw a square if fixed, otherwise a circle
+        if (isFixed) {
+            c.rect(v[0] - radius, v[1] - radius, radius * 2, radius * 2);
+        } else {
+            c.arc(v[0], v[1], radius, 0, 2 * Math.PI);
+        }
         c.stroke();
     } else {
-        // Draw filled circle
+        // Draw filled shape
         c.beginPath();
-        c.arc(v[0], v[1], VERTEX_SIZE / 2, 0, 2 * Math.PI);
+        var radius = VERTEX_SIZE / 2;
+
+        // Draw a square if fixed, otherwise a circle
+        if (isFixed) {
+            c.rect(v[0] - radius, v[1] - radius, radius * 2, radius * 2);
+        } else {
+            c.arc(v[0], v[1], radius, 0, 2 * Math.PI);
+        }
         c.fill();
     }
 }
-
 function colorComponent(x) {
     x = Math.round(255 * x).toString(16);
     if (x.length < 2) x = '0' + x;
@@ -64,6 +79,58 @@ function colorString(r, g, b) {
     return '#' + colorComponent(r) + colorComponent(g) + colorComponent(b);
 }
 
+function drawGrid(c, width, height) {
+    var smallGrid = 15;
+    var bigGrid = 75;
+
+    c.save();
+
+    // background
+    c.fillStyle = currentTheme === 'dark' ? '#111111' : '#eeeeee';
+    c.fillRect(0, 0, width, height);
+
+    // small grid lines
+    c.strokeStyle = currentTheme === 'dark'
+        ? 'rgba(255, 255, 255, 0.08)'
+        : 'rgba(0, 0, 0, 0.08)';
+    c.lineWidth = 1;
+
+    for (var x = 0; x <= width; x += smallGrid) {
+        c.beginPath();
+        c.moveTo(x, 0);
+        c.lineTo(x, height);
+        c.stroke();
+    }
+
+    for (var y = 0; y <= height; y += smallGrid) {
+        c.beginPath();
+        c.moveTo(0, y);
+        c.lineTo(width, y);
+        c.stroke();
+    }
+
+    // bigger grid lines
+    c.strokeStyle = currentTheme === 'dark'
+        ? 'rgba(255, 255, 255, 0.18)'
+        : 'rgba(0, 0, 0, 0.18)';
+    c.lineWidth = 1;
+
+    for (var bx = 0; bx <= width; bx += bigGrid) {
+        c.beginPath();
+        c.moveTo(bx, 0);
+        c.lineTo(bx, height);
+        c.stroke();
+    }
+
+    for (var by = 0; by <= height; by += bigGrid) {
+        c.beginPath();
+        c.moveTo(0, by);
+        c.lineTo(width, by);
+        c.stroke();
+    }
+
+    c.restore();
+}
 
 function display() {
     var num = numeric;
@@ -85,6 +152,8 @@ function display() {
     // BUG FIX 2: 'canvas' is a jQuery object, so 'canvas.width' returned a function, not a number!
     // We must use canvas[0].width and canvas[0].height to get the real pixel values.
     c.clearRect(0, 0, canvas[0].width, canvas[0].height);
+
+    drawGrid(c, canvas[0].width, canvas[0].height);
 
     syncAttachedVertices();
 
@@ -226,17 +295,28 @@ function display() {
                     c.fillStyle = colorString(0, 1, 1);
                     c.strokeStyle = colorString(0, 1, 1);
                 } else {
-                    c.fillStyle = colorString (1, 1, 1); //white
-                    c.strokeStyle = colorString (1, 1, 1);
-                } 
+                    // Respect the theme during add-edge mode
+                    if (currentTheme === 'light') {
+                        c.fillStyle = colorString(0, 0, 0); // black
+                        c.strokeStyle = colorString(0, 0, 0);
+                    } else {
+                        c.fillStyle = colorString(1, 1, 1); // white
+                        c.strokeStyle = colorString(1, 1, 1);
+                    }
+                }
             } else if (i == curVertex || selectedVertices.indexOf(i) >= 0) {
                 // NEW: Highlight blue if it's the curVertex OR in the selectedVertices array
                 c.fillStyle = colorString(0, 0.5, 1);
                 c.strokeStyle = colorString(0, 0.5, 1);
             }
             else{
-                c.fillStyle = colorString(1,1,1); // white for normal nodes
-                c.strokeStyle = colorString(1,1,1);
+                if (currentTheme === 'light') {
+                    c.fillStyle = colorString(0, 0, 0);
+                    c.strokeStyle = colorString(0, 0, 0);
+                } else {
+                    c.fillStyle = colorString(1, 1, 1);
+                    c.strokeStyle = colorString(1, 1, 1);
+                }
             }
             
             if (thisNodeStyle === 'open') {
@@ -248,18 +328,22 @@ function display() {
             c.shadowBlur = 0;
 
             // Draw fixed point indicator (pin icon)
-            if (isFixed && showLabels) {
-                c.fillStyle = colorString(1, 0.2, 0.2); // Red for fixed
-                c.font = 'bold 16px Arial';
-                c.fillText('📍', v[0] + 8, v[1] - 8);
-            }
+            //if (isFixed && showLabels) {
+            //    c.fillStyle = colorString(1, 0.2, 0.2); // Red for fixed
+            //    c.font = 'bold 16px Arial';
+            //    c.fillText('📍', v[0] + 8, v[1] - 8);
+            //}
             
             if (showLabels) {
-                c.fillStyle = colorString(1, 1, 1); // White labels
+                if (currentTheme === 'light') {
+                    c.fillStyle = colorString(0, 0, 0); // Black labels
+                } else {
+                    c.fillStyle = colorString(1, 1, 1); // White labels
+                }
                 c.font = 'bold 12px Arial';
             
                 // Base name only
-                var baseName = nodeNames[i] || String.fromCharCode(65 + i);
+                var baseName = nodeNames[i] || '?';
             
                 // Automatically add * for open nodes
                 var label = (thisNodeStyle === 'open') ? (baseName + '*') : baseName;

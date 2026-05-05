@@ -1,7 +1,6 @@
 /**
  * io.js
  * XML save/load helpers.
- * Split from the original monolithic main.js for readability.
  */
 
 function saveLinkageAsXML() {

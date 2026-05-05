@@ -16,6 +16,8 @@ var VIEWS = 8;
 var info = 0;
 var INFOS = 2;
 
+var currentTheme = 'dark';
+
 // zoom state (simple scaling around origin)
 var scale = 1.0; // 1 = 100%
 
@@ -44,6 +46,7 @@ var appMode = 'edit'; // 'edit' or 'play' mode
 
 // Custom label names
 var nodeNames = {}; // Custom names for nodes {index: "name"}
+var nextAutoNodeNameIndex = 0;
 var edgeNames = {}; // Custom names for edges {index: "name"}
 
 // Individual node styles
@@ -250,9 +253,16 @@ function getDragGroup(i) {
     return null;
 }
 
+//helps keep names static and does not change when deleted previous node
+function getNextAutoNodeName() {
+    var name = String.fromCharCode(65 + nextAutoNodeNameIndex);
+    nextAutoNodeNameIndex++;
+    return name;
+}
+
 //compares vertice names with star and without
 function getBaseNodeName(i) {
-    return nodeNames[i] || String.fromCharCode(65 + i);
+    return nodeNames[i] || '?';
 }
 
 //open and solid with the same name

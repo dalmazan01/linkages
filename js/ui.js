@@ -52,7 +52,6 @@ $(function() {
 						isNodeFixed = true;
 					}
 				}
-
 				// Don't drag if the node (or its partner) is fixed
 				if (isNodeFixed) {
 					return;
@@ -175,7 +174,6 @@ $(function() {
 			}
 			else {
 				link.vertices[i] = mousePos;
-
 				target = findAttachTarget(i);
 				if (target >= 0) {
 					attachSolidToOpen(i, target);
@@ -273,7 +271,7 @@ $(function() {
 
 		if (nodeIndex >= 0) {
 			// Rename node
-			var currentName = nodeNames[nodeIndex] || String.fromCharCode(65 + nodeIndex);
+			var currentName = nodeNames[nodeIndex] || '?';
 			var newName = prompt('Enter new name for node:', currentName);
 			if (newName !== null && newName.trim() !== '') {
 				nodeNames[nodeIndex] = newName.trim();
@@ -446,6 +444,45 @@ $(function() {
 		scale = Math.min(10, scale * 1.2);
 		display();
 	});
+
+	$('#btn-theme-toggle').click(function() {
+		const btn = this;
+	
+		const isDark = currentTheme === 'dark';
+
+		currentTheme = isDark ? 'light' : 'dark';
+	
+		document.body.setAttribute('data-theme', currentTheme);
+	
+		btn.classList.toggle("active", currentTheme ==="dark");
+
+		display();
+	});
+
+	$('#btn-sidebar-toggle').click(function() {
+		document.body.classList.toggle('sidebar-collapsed');
+	
+		if (document.body.classList.contains('sidebar-collapsed')) {
+			$(this).text('☰');
+			$(this).attr('title', 'Expand sidebar');
+		} else {
+			$(this).text('✕');
+			$(this).attr('title', 'Collapse sidebar');
+		}
+	
+		resized = true;
+		display();
+	});
+
+	// Initialize the theme when the page loads
+	document.body.setAttribute('data-theme', currentTheme);
+
+	const btn = document.getElementById("btn-theme-toggle");
+
+	if (currentTheme === "dark") {
+		btn.classList.add("active");
+	}
+
 	$('#btn-zoom-out').click(function() {
 		scale = Math.max(0.1, scale / 1.2);
 		display();
