@@ -1,7 +1,13 @@
 
 :root {
     --bg-color: #f4f4f5;
-    --toolbar-bg: #ffffff;
+    --toolbar-bg: #ffffff; /* Light background for sidebar */
+    --toolbar-border: #d4d4d8;
+    --toolbar-text: #18181b; /* Dark text for light mode */
+    --toolbar-title: #71717a;
+    --btn-bg: rgba(0, 0, 0, 0.05);
+    --btn-border: rgba(0, 0, 0, 0.1);
+    --btn-hover: rgba(0, 0, 0, 0.1);
     --text-color: #18181b;
     --canvas-bg: #e4e4e7;
     --border-color: #d4d4d8;
@@ -14,7 +20,13 @@ body {
 
 [data-theme="dark"] {
     --bg-color: #18181b;
-    --toolbar-bg: #27272a;
+    --toolbar-bg: linear-gradient(to left, #1a1a2e 0%, #191b22 100%);
+    --toolbar-border: #000000;
+    --toolbar-text: #ffffff;
+    --toolbar-title: rgba(255, 255, 255, 0.6);
+    --btn-bg: rgba(255, 255, 255, 0.08);
+    --btn-border: rgba(255, 255, 255, 0.15);
+    --btn-hover: rgba(255, 255, 255, 0.15);
     --text-color: #f4f4f5;
     --canvas-bg: #000000;
     --border-color: #3f3f46;
@@ -44,16 +56,15 @@ body {
     right: 0;
     bottom: 0;
     width: 200px;
-    background: linear-gradient(to left, #1a1a2e 0%, #191b22 100%);
-    border-left: 2px solid #000000;
+    background: var(--toolbar-bg);
+    border-left: 2px solid var(--toolbar-border);
     display: flex;
     flex-direction: column;
     padding: 20px 15px;
     gap: 0;
     z-index: 1000;
-    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.3);
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
     overflow-y: auto;
-    transition: width 0.25s ease, padding 0.25s ease;
 }
 
 .toolbar-section {
@@ -73,9 +84,9 @@ body {
 
 .toolbar-btn {
     width: 100%;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: white;
+    background: var(--btn-bg);
+    border: 1px solid var(--btn-border);
+    color: var(--toolbar-text);
     padding: 12px 12px;
     border-radius: 8px;
     cursor: pointer;
@@ -96,6 +107,8 @@ body {
 }
 
 .toolbar-btn:active {
+    background: var(--btn-hover);
+    border-color: var(--btn-border);
     transform: translateX(0);
 }
 
