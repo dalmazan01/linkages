@@ -345,11 +345,26 @@ $(function() {
 	$('#canvas').on('wheel', function(event) {
 		event.preventDefault();
 
-		// Get scroll direction (negative = scroll down/zoom out, positive = scroll up/zoom in)
-		var delta = event.originalEvent.deltaY < 0 ? 1.2 : 0.833; // 1/1.2 ~= 0.833
+		// 1. Get the mouse position relative to the canvas
+		var rect = this.getBoundingClientRect();
+		var mouseX = event.originalEvent.clientX - rect.left;
+		var mouseY = event.originalEvent.clientY - rect.top;
 
-		scale = Math.max(0.1, Math.min(10, scale * delta));
-		display();
+		// 2. Determine the zoom multiplier
+		var delta = event.originalEvent.deltaY < 0 ? 1.2 : 0.833; // 1/1.2 ~= 0.833
+		var oldScale = scale;
+		var newScale = Math.max(0.1, Math.min(10, scale * delta));
+
+		// 3. Adjust pan to keep the world point under the cursor stationary
+		if (oldScale !== newScale) {
+			var ratio = newScale / oldScale;
+			
+			panX = mouseX - (mouseX - panX) * ratio;
+			panY = mouseY - (mouseY - panY) * ratio;
+			
+			scale = newScale;
+			display();
+		}
 	});
 
 	// Limited keyboard controls - only backspace for delete
@@ -439,10 +454,31 @@ $(function() {
 
 	// Toolbar button handlers
 
+	// Helper function for button zooming into the center of the canvas
+	function zoomCentered(delta) {
+		var canvas = $('#canvas')[0];
+		var centerX = canvas.width / 2;
+		var centerY = canvas.height / 2;
+
+		var oldScale = scale;
+		var newScale = Math.max(0.1, Math.min(10, scale * delta));
+
+		if (oldScale !== newScale) {
+			var ratio = newScale / oldScale;
+			panX = centerX - (centerX - panX) * ratio;
+			panY = centerY - (centerY - panY) * ratio;
+			scale = newScale;
+			display();
+		}
+	}
+
 	// Zoom buttons (scale around center of canvas)
 	$('#btn-zoom-in').click(function() {
-		scale = Math.min(10, scale * 1.2);
-		display();
+		zoomCentered(1.2);
+	});
+
+	$('#btn-zoom-out').click(function() {
+		zoomCentered(0.833);
 	});
 
 	$('#btn-theme-toggle').click(function() {
@@ -482,11 +518,6 @@ $(function() {
 	if (currentTheme === "dark") {
 		btn.classList.add("active");
 	}
-
-	$('#btn-zoom-out').click(function() {
-		scale = Math.max(0.1, scale / 1.2);
-		display();
-	});
 
 	// Mode Toggle Button - Switch between Edit and Play mode
 	$('#btn-mode-toggle').click(function() {
