@@ -80,54 +80,60 @@ function colorString(r, g, b) {
 }
 
 function drawGrid(c, width, height) {
-    var smallGrid = 15;
-    var bigGrid = 75;
-
     c.save();
 
-    // background
+    // Background
     c.fillStyle = currentTheme === 'dark' ? '#111111' : '#eeeeee';
     c.fillRect(0, 0, width, height);
 
-    // small grid lines
-    c.strokeStyle = currentTheme === 'dark'
-        ? 'rgba(255, 255, 255, 0.08)'
-        : 'rgba(0, 0, 0, 0.08)';
-    c.lineWidth = 1;
+    // Determine dynamic grid size based on the current scale
+    var baseGridSize = 75; 
+    
+    // Find the power of 2 to scale the grid by, so it subdivides cleanly
+    var scaleLevel = Math.floor(Math.log(scale) / Math.log(2));
+    
+    // World spacing adjusts depending on zoom level to "add more grids"
+    var worldBigGrid = baseGridSize / Math.pow(2, scaleLevel);
+    var worldSmallGrid = worldBigGrid / 5;
 
-    for (var x = 0; x <= width; x += smallGrid) {
+    // Multiply by current scale to get actual screen pixels
+    var screenBigGrid = worldBigGrid * scale;
+    var screenSmallGrid = worldSmallGrid * scale;
+
+    // Colors
+    var smallGridColor = currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)';
+    var bigGridColor = currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.18)' : 'rgba(0, 0, 0, 0.18)';
+
+    // Helper function to draw infinite grid lines that pan with the camera
+    function drawGridLines(spacing, color) {
+        c.strokeStyle = color;
+        c.lineWidth = 1;
         c.beginPath();
-        c.moveTo(x, 0);
-        c.lineTo(x, height);
+
+        // Calculate starting offset based on pan (so the grid moves when dragging)
+        var offsetX = panX % spacing;
+        var offsetY = panY % spacing;
+        
+        // Fix negative modulo in JavaScript so panning up/left works smoothly
+        if (offsetX < 0) offsetX += spacing;
+        if (offsetY < 0) offsetY += spacing;
+
+        // Vertical lines
+        for (var x = offsetX; x <= width; x += spacing) {
+            c.moveTo(x, 0);
+            c.lineTo(x, height);
+        }
+        // Horizontal lines
+        for (var y = offsetY; y <= height; y += spacing) {
+            c.moveTo(0, y);
+            c.lineTo(width, y);
+        }
         c.stroke();
     }
 
-    for (var y = 0; y <= height; y += smallGrid) {
-        c.beginPath();
-        c.moveTo(0, y);
-        c.lineTo(width, y);
-        c.stroke();
-    }
-
-    // bigger grid lines
-    c.strokeStyle = currentTheme === 'dark'
-        ? 'rgba(255, 255, 255, 0.18)'
-        : 'rgba(0, 0, 0, 0.18)';
-    c.lineWidth = 1;
-
-    for (var bx = 0; bx <= width; bx += bigGrid) {
-        c.beginPath();
-        c.moveTo(bx, 0);
-        c.lineTo(bx, height);
-        c.stroke();
-    }
-
-    for (var by = 0; by <= height; by += bigGrid) {
-        c.beginPath();
-        c.moveTo(0, by);
-        c.lineTo(width, by);
-        c.stroke();
-    }
+    // Draw the grids
+    drawGridLines(screenSmallGrid, smallGridColor);
+    drawGridLines(screenBigGrid, bigGridColor);
 
     c.restore();
 }
