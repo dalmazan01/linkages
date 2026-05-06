@@ -252,6 +252,16 @@ $(function() {
 
 	// Double-click to rename nodes or edges
 	$('#canvas').dblclick(function(event) {
+		var offset = $(this).offset();
+		var sx = event.pageX - offset.left;
+		var sy = event.pageY - offset.top;
+
+		var hits = pickAllVertices(sx, sy);
+
+		if (hits.length > 1) {
+			showNodePicker(hits, event.pageX, event.pageY);
+			return;
+		}
 		var rect = this.getBoundingClientRect();
 		var x = event.clientX - rect.left;
 		var y = event.clientY - rect.top;
@@ -885,9 +895,28 @@ $(function() {
 			$('#edge-context-menu').hide();
 		}
 	});
-
+	
 	// Prevent menu from closing when clicking inside it
 	$('#edge-context-menu').click(function(e) {
+		e.stopPropagation();
+	});
+
+
+	//Click anywhere else to close node list pop up
+	$(document).click(function(e) {
+		if (!$(e.target).closest('#node-picker-menu').length) {
+	
+			$('#node-picker-menu').hide();
+	
+			curVertex = undefined;
+			curEdge = undefined;
+	
+			display();
+		}
+	});
+
+	//prevents pop up closing if clicking inside the pop-up
+	$('#node-picker-menu').click(function(e) {
 		e.stopPropagation();
 	});
 

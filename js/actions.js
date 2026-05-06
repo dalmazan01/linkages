@@ -21,6 +21,50 @@ function pick(x, y) {
     return {};
 }
 
+function pickAllVertices(x, y) {
+    var w = screenToWorld(x, y);
+    var wx = w[0];
+    var wy = w[1];
+
+    var hits = [];
+
+    _.each(link.vertices, function(v, i) {
+        if (link.vertexDist2(wx, wy, i) < PICK_DIST2) {
+            hits.push(i);
+        }
+    });
+
+    return hits;
+}
+
+function showNodePicker(hits, pageX, pageY) {
+    var menu = $('#node-picker-menu');
+    menu.empty();
+
+    hits.forEach(function(i) {
+        var name = nodeNames[i] || ('Node ' + i);
+
+        $('<div>')
+            .addClass('node-picker-option')
+            .text(name + '  (#' + i + ')')
+            .click(function() {
+                curVertex = i;
+
+                curEdge = undefined;
+
+                menu.hide();
+                display();
+            })
+            .appendTo(menu);
+    });
+
+    menu.css({
+        left: pageX + 'px',
+        top: pageY + 'px',
+        display: 'block'
+    });
+}
+
 // Find nearest node to a world position
 function findNearestNode(wx, wy) {
     var nearest = -1;
