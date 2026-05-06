@@ -326,6 +326,7 @@ $(function() {
 			$('#menu-edge-name').text(currentName);
 			$('#menu-current-length').text(currentLength.toFixed(2));
 			$('#menu-length-input').val('');
+			$('#menu-color-input').val(edgeColors[edgeIndex] || '#ff7700');
 
 			// Show menu at cursor position
 			menu.css({
@@ -405,9 +406,8 @@ $(function() {
 
 		// Backspace or Delete key
 		if (event.keyCode === 8 || event.keyCode === 46) {
-			var tag = document.activeElement && document.activeElement.tagName;
-			if (tag === 'INPUT' || tag === 'TEXTAREA') return;
 			event.preventDefault(); // Prevent browser back navigation
+
 			if (curVertex !== undefined && curVertex >= 0) {
 				// Delete vertex
 				saveHistory();
@@ -871,6 +871,25 @@ $(function() {
 
 	$('#menu-cancel-btn').click(function() {
 		$('#edge-context-menu').hide();
+	});
+
+	// Color picker - apply immediately on change
+	$('#menu-color-input').on('input', function() {
+		var edgeIndex = window.currentEditEdge;
+		if (edgeIndex >= 0 && edgeIndex < link.edges.length) {
+			edgeColors[edgeIndex] = $(this).val();
+			display();
+		}
+	});
+
+	// Reset color button - remove custom color for this edge
+	$('#menu-reset-color-btn').click(function() {
+		var edgeIndex = window.currentEditEdge;
+		if (edgeIndex >= 0 && edgeIndex < link.edges.length) {
+			delete edgeColors[edgeIndex];
+			$('#menu-color-input').val('#ff7700');
+			display();
+		}
 	});
 
 	// Press Enter to set length

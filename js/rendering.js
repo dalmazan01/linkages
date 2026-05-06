@@ -178,6 +178,7 @@ function display() {
 
     _.each(link.edges, function(e, k) {
         if (k == curEdge) c.strokeStyle = colorString(1, 0.3, 1);
+        else if (edgeColors[k]) c.strokeStyle = edgeColors[k];
         else c.strokeStyle = colorString(1, 0.3, 0);
         strokeLine(c, link.vertices[e.i], link.vertices[e.j]);
         
