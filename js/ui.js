@@ -405,8 +405,9 @@ $(function() {
 
 		// Backspace or Delete key
 		if (event.keyCode === 8 || event.keyCode === 46) {
+			var tag = document.activeElement && document.activeElement.tagName;
+			if (tag === 'INPUT' || tag === 'TEXTAREA') return;
 			event.preventDefault(); // Prevent browser back navigation
-
 			if (curVertex !== undefined && curVertex >= 0) {
 				// Delete vertex
 				saveHistory();
