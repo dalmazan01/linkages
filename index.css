@@ -13,6 +13,62 @@
     --border-color: #d4d4d8;
 }
 
+/* --- Floating Controls Container --- */
+#floating-controls {
+    position: fixed;
+    bottom: 20px;
+    /* Sets it right next to the 200px sidebar, plus a 20px gap */
+    right: 220px; 
+    background: var(--toolbar-bg);
+    border: 1px solid var(--toolbar-border);
+    border-radius: 8px;
+    display: flex;
+    gap: 4px;
+    padding: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    transition: right 0.25s ease; /* Matches your sidebar animation */
+}
+
+/* Slide the controls to the edge when the sidebar is hidden */
+body.sidebar-collapsed #floating-controls {
+    right: 20px;
+}
+
+/* --- Small Action Buttons --- */
+.action-btn {
+    background: var(--btn-bg);
+    border: 1px solid transparent;
+    color: var(--toolbar-text);
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+    background: rgba(79, 195, 247, 0.15);
+    border-color: rgba(79, 195, 247, 0.4);
+    transform: translateY(-1px);
+}
+
+.action-btn:active {
+    transform: translateY(0) scale(0.95);
+}
+
+/* --- Visual Separator --- */
+#floating-controls .divider {
+    width: 1px;
+    background: var(--toolbar-border);
+    margin: 0 4px;
+    opacity: 0.5;
+}
+
 body {
     background-color: var(--bg-color);
     color: var(--text-color);
@@ -314,28 +370,4 @@ body.sidebar-collapsed #canvas {
 
 body.sidebar-collapsed #btn-sidebar-toggle {
     right: 15px;
-}
-
-#node-picker-menu {
-    display: none;
-    position: fixed;
-    z-index: 2000;
-    background: #1a1a2e;
-    color: white;
-    border: 1px solid #4fc3f7;
-    border-radius: 8px;
-    padding: 6px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.35);
-}
-
-.node-picker-option {
-    padding: 6px 10px;
-    cursor: pointer;
-    border-radius: 5px;
-    white-space: nowrap;
-}
-
-.node-picker-option:hover {
-    background: #4fc3f7;
-    color: black;
 }

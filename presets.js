@@ -67,3 +67,58 @@ allostericPreset.presetOpenNodes = {
 };
 
 PRESETS.push(allostericPreset);
+
+var topologicalPreset = new Linkage();
+
+topologicalPreset.vertices = [
+    [526.36, 449.78],   // Node 0 (A)
+    [599.32, 449.50],   // Node 1 (B)
+    [674.57, 450.50],   // Node 2 (C)
+    [749.81, 449.78],   // Node 3 (D)
+    [825.43, 449.32],   // Node 4 (E)
+    [900.40, 451.27],   // Node 5 (F)
+    [975.35, 450.48],   // Node 6 (G)
+    [1051.23, 450.47],  // Node 7 (H)
+    [591.75, 421.53],   // Node 8 (J)
+    [668.70, 479.45],   // Node 9 (K)
+    [742.95, 419.48],   // Node 10 (L)
+    [819.54, 478.60],   // Node 11 (M)
+    [893.89, 419.60],   // Node 12 (N)
+    [969.39, 479.90],   // Node 13 (O)
+    [1039.89, 414.78],  // Node 14 (P)
+    [1123.37, 462.37]   // Node 15 (Q)
+];
+
+// Pins on the bottom base row
+topologicalPreset.fixed = [0, 1, 2, 3, 4, 5, 6, 7];
+
+topologicalPreset.edges = [
+    { i: 0, j: 8, length: 71.23 },
+    { i: 1, j: 9, length: 75.56 },
+    { i: 8, j: 9, length: 96.32 },
+    { i: 2, j: 10, length: 75.08 },
+    { i: 9, j: 10, length: 95.44 },
+    { i: 10, j: 11, length: 96.76 },
+    { i: 3, j: 11, length: 75.46 },
+    { i: 4, j: 12, length: 74.64 },
+    { i: 11, j: 12, length: 94.91 },
+    { i: 5, j: 13, length: 74.70 },
+    { i: 12, j: 13, length: 96.63 },
+    { i: 6, j: 14, length: 73.76 },
+    { i: 13, j: 14, length: 95.97 },
+    { i: 7, j: 15, length: 73.12 },
+    { i: 14, j: 15, length: 96.10 }
+];
+
+// Custom Metadata for UI labels
+topologicalPreset.presetNodeNames = { 
+    0: "A", 1: "B", 2: "C", 3: "D", 
+    4: "E", 5: "F", 6: "G", 7: "H", 
+    8: "J", 9: "K", 10: "L", 11: "M", 
+    12: "N", 13: "O", 14: "P", 15: "Q" 
+};
+
+// Assuming all nodes are closed by default since the XML didn't specify open states.
+// You can add presetOpenNodes here if you need some to be open.
+
+PRESETS.push(topologicalPreset);

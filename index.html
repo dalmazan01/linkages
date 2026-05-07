@@ -23,6 +23,15 @@
 
   </head>
   <body>
+    <div id="floating-controls">
+      <button class="action-btn" id="btn-undo" title="Undo">↩️</button>
+      <button class="action-btn" id="btn-redo" title="Redo">↪️</button>
+    
+    <div class="divider"></div>
+    
+      <button class="action-btn" id="btn-zoom-in" title="Zoom In">➕</button>
+      <button class="action-btn" id="btn-zoom-out" title="Zoom Out">➖</button>
+    </div>
     <!-- Right Sidebar Toolbar -->
     <div id="toolbar">   
       <button id="btn-sidebar-toggle" title="Collapse sidebar">☰</button>
@@ -76,16 +85,6 @@
             <span class="btn-icon">🗑</span>
             <span class="btn-label">Delete</span>
           </button>
-
-          <button id="btn-undo" class="toolbar-btn" title="Undo last action (Ctrl+Z)" disabled>
-            <span class="btn-icon">↩</span>
-            <span class="btn-label">Undo</span>
-          </button>
-
-          <button id="btn-redo" class="toolbar-btn" title="Redo last action (Ctrl+Y)" disabled>
-            <span class="btn-icon">↪</span>
-            <span class="btn-label">Redo</span>
-          </button>
           
           <button id="btn-label" class="toolbar-btn" title="Double-click nodes/edges to rename">
             <span class="btn-icon">🏷</span>
@@ -105,14 +104,6 @@
           <span class="btn-icon">🔢</span>
           <span class="btn-label">Show Lengths</span>
         </button>
-        <button id="btn-zoom-in" class="toolbar-btn" title="Zoom in">
-          <span class="btn-icon">➕</span>
-          <span class="btn-label">Zoom In</span>
-        </button>
-        <button id="btn-zoom-out" class="toolbar-btn" title="Zoom out">
-          <span class="btn-icon">➖</span>
-          <span class="btn-label">Zoom Out</span>
-        </button>
       </div>
       <!-- Hidden file input for XML upload -->
       <input type="file" id="xml-file-input" accept=".xml" style="display:none;" />
@@ -125,7 +116,7 @@
 
         <button id="btn-save-svg" class="toolbar-btn">
           <span class="btn-icon">🖼️</span>
-          <span class="btn-label">Export SVG</span>
+          <span class="btn-label">Save SVG</span>
         </button>
 
       <!-- Load button -->
@@ -172,7 +163,6 @@
           </button>
 
         </div>
-
         
         <div class="toolbar-separator-h"></div>
         
@@ -230,8 +220,6 @@
         <button id="menu-rename-btn" style="width: 100%; padding: 8px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin-bottom: 5px;">✏️ Rename</button>
         <button id="menu-cancel-btn" style="width: 100%; padding: 8px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer;">✗ Cancel</button>
     </div>
-
-    <div id="node-picker-menu"></div>
 
     <canvas id="canvas" width="800" height="800"></canvas>
   </body>
