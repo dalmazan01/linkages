@@ -10,11 +10,12 @@ $(function() {
 		var x = event.pageX - offset.left;
 		var y = event.pageY - offset.top;
 
-		// Right-click drag for panning
-		if (event.button === 2) {
+		// Middle or right-click drag for panning
+		if (event.button === 1 || event.button === 2) {
 			isPanDragging = true;
 			lastPanMouseX = x;
 			lastPanMouseY = y;
+			if (event.button === 1) event.preventDefault();
 			return;
 		}
 
@@ -39,6 +40,24 @@ $(function() {
 
 		// Start constrained drag ONLY in select/play mode.
 		// Other tools (add-node/add-edge/delete/label) rely on mouseup handlers.
+		if (currentTool === 'select-multiple') {
+			var picked = pick(x, y);
+			// If clicking on an already-selected vertex, start group drag
+			if (picked.vertex >= 0 && selectedVertices.indexOf(picked.vertex) >= 0) {
+				var w = screenToWorld(x, y);
+				isGroupDragging = true;
+				groupDragLastPos = {x: w[0], y: w[1]};
+			} else {
+				// Otherwise start a fresh marquee
+				selectedVertices = [];
+				isMarqueeSelecting = true;
+				marqueeStart = {x: x, y: y};
+				marqueeEnd = {x: x, y: y};
+			}
+			display();
+			return;
+		}
+
 		if (currentTool === 'select' || appMode === 'play') {
 			picked = pick(x, y); // pick() already accounts for scale
 			if (picked.vertex >= 0) {
@@ -74,6 +93,36 @@ $(function() {
 		var offset = $(this).offset();
 		var x = event.pageX - offset.left;
 		var y = event.pageY - offset.top;
+
+		// Finish marquee selection
+		if (isMarqueeSelecting) {
+			isMarqueeSelecting = false;
+			// Convert marquee screen rect to world coords
+			var x1 = Math.min(marqueeStart.x, marqueeEnd.x);
+			var x2 = Math.max(marqueeStart.x, marqueeEnd.x);
+			var y1 = Math.min(marqueeStart.y, marqueeEnd.y);
+			var y2 = Math.max(marqueeStart.y, marqueeEnd.y);
+			var w1 = screenToWorld(x1, y1);
+			var w2 = screenToWorld(x2, y2);
+			selectedVertices = [];
+			_.each(link.vertices, function(v, i) {
+				if (v[0] >= w1[0] && v[0] <= w2[0] && v[1] >= w1[1] && v[1] <= w2[1]) {
+					selectedVertices.push(i);
+				}
+			});
+			marqueeStart = null;
+			marqueeEnd = null;
+			display();
+			return;
+		}
+
+		// End group drag
+		if (isGroupDragging) {
+			isGroupDragging = false;
+			groupDragLastPos = null;
+			update();
+			return;
+		}
 
 		// Handle add-edge mode - complete edge on mouseup
 		if (currentTool === 'add-edge' && edgeStartNode >= 0) {
@@ -126,6 +175,29 @@ $(function() {
 		var offset = $(this).offset();
 		var x = event.pageX - offset.left;
 		var y = event.pageY - offset.top;
+
+		// Marquee selection update
+		if (isMarqueeSelecting) {
+			marqueeEnd = {x: x, y: y};
+			display();
+			return;
+		}
+
+		// Group drag - move all selected vertices together
+		if (isGroupDragging && selectedVertices.length > 0) {
+			var w = screenToWorld(x, y);
+			var dx = w[0] - groupDragLastPos.x;
+			var dy = w[1] - groupDragLastPos.y;
+			groupDragLastPos = {x: w[0], y: w[1]};
+			_.each(selectedVertices, function(vi) {
+				if (link.fixed.indexOf(vi) < 0) {
+					link.vertices[vi] = [link.vertices[vi][0] + dx, link.vertices[vi][1] + dy];
+				}
+			});
+			solveJointedSystem(10);
+			update();
+			return;
+		}
 
 		// Pan dragging with space+drag
 		if (isPanDragging) {
@@ -218,6 +290,17 @@ $(function() {
 
 	// Clear preview node when mouse leaves canvas
 	$('#canvas').mouseleave(function(){
+		if (isMarqueeSelecting) {
+			isMarqueeSelecting = false;
+			marqueeStart = null;
+			marqueeEnd = null;
+			display();
+		}
+		if (isGroupDragging) {
+			isGroupDragging = false;
+			groupDragLastPos = null;
+			update();
+		}
 		if(previewNodePosition !== null){
 			previewNodePosition = null;
 			display();
@@ -336,6 +419,7 @@ $(function() {
 			$('#menu-edge-name').text(currentName);
 			$('#menu-current-length').text(currentLength.toFixed(2));
 			$('#menu-length-input').val('');
+			$('#menu-color-input').val(edgeColors[edgeIndex] || '#ff7700');
 
 			// Show menu at cursor position
 			menu.css({
@@ -415,6 +499,8 @@ $(function() {
 
 		// Backspace or Delete key
 		if (event.keyCode === 8 || event.keyCode === 46) {
+			var tag = document.activeElement && document.activeElement.tagName;
+			if (tag === 'INPUT' || tag === 'TEXTAREA') return;
 			event.preventDefault(); // Prevent browser back navigation
 
 			if (curVertex !== undefined && curVertex >= 0) {
@@ -880,6 +966,23 @@ $(function() {
 
 	$('#menu-cancel-btn').click(function() {
 		$('#edge-context-menu').hide();
+	});
+
+	$('#menu-color-input').on('input', function() {
+		var edgeIndex = window.currentEditEdge;
+		if (edgeIndex >= 0 && edgeIndex < link.edges.length) {
+			edgeColors[edgeIndex] = $(this).val();
+			display();
+		}
+	});
+
+	$('#menu-reset-color-btn').click(function() {
+		var edgeIndex = window.currentEditEdge;
+		if (edgeIndex >= 0 && edgeIndex < link.edges.length) {
+			delete edgeColors[edgeIndex];
+			$('#menu-color-input').val('#ff7700');
+			display();
+		}
 	});
 
 	// Press Enter to set length

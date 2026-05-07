@@ -178,13 +178,14 @@ function display() {
 
     _.each(link.edges, function(e, k) {
         if (k == curEdge) c.strokeStyle = colorString(1, 0.3, 1);
+        else if (edgeColors[k]) c.strokeStyle = edgeColors[k];
         else c.strokeStyle = colorString(1, 0.3, 0);
         strokeLine(c, link.vertices[e.i], link.vertices[e.j]);
         
         // Draw edge label (use custom name if available)
         if (showLabels) {
             var midpoint = numeric.mul(0.5, numeric.add(link.vertices[e.i], link.vertices[e.j]));
-            c.fillStyle = colorString(1, 1, 0.5); // Light yellow for edge labels
+            c.fillStyle = currentTheme === 'dark' ? colorString(1, 1, 0.5) : colorString(0, 0.6, 0);
             c.font = '10px Arial';
             var edgeLabel = edgeNames[k] || ('E' + (k + 1));
             c.fillText(edgeLabel, midpoint[0] + 5, midpoint[1] - 5);
@@ -195,7 +196,7 @@ function display() {
             var v2 = link.vertices[e.j];
             var mid = numeric.mul(0.5, numeric.add(u, v2));
             var len = numeric.norm2(numeric.sub(v2, u));
-            c.fillStyle = colorString(1, 1, 0.5);
+            c.fillStyle = currentTheme === 'dark' ? colorString(1, 1, 0.5) : colorString(0, 0.6, 0);
             c.font = '10px Arial';
             c.fillText(len.toFixed(2), mid[0] + 5, mid[1] + 10);
         }
@@ -377,6 +378,25 @@ function display() {
         fillPoint(c, previewNodePosition, nodeStyle);  // ✅ Use nodeStyle instead
         c.restore();
     }
+    // Draw marquee selection rectangle (in screen space, before restore)
+    if (isMarqueeSelecting && marqueeStart && marqueeEnd) {
+        c.restore(); // temporarily exit world transform
+        var mx = Math.min(marqueeStart.x, marqueeEnd.x);
+        var my = Math.min(marqueeStart.y, marqueeEnd.y);
+        var mw = Math.abs(marqueeEnd.x - marqueeStart.x);
+        var mh = Math.abs(marqueeEnd.y - marqueeStart.y);
+        c.save();
+        c.strokeStyle = 'rgba(0, 120, 255, 0.9)';
+        c.fillStyle = 'rgba(0, 120, 255, 0.15)';
+        c.lineWidth = 1.5;
+        c.setLineDash([5, 3]);
+        c.fillRect(mx, my, mw, mh);
+        c.strokeRect(mx, my, mw, mh);
+        c.setLineDash([]);
+        c.restore();
+        return; // skip the second c.restore() below since we already called it
+    }
+
     // undo scale transform
     c.restore();
 }
