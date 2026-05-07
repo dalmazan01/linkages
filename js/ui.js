@@ -408,6 +408,7 @@ $(function() {
 			$('#menu-edge-name').text(currentName);
 			$('#menu-current-length').text(currentLength.toFixed(2));
 			$('#menu-length-input').val('');
+			$('#menu-color-input').val(edgeColors[edgeIndex] || '#ff7700');
 
 			// Show menu at cursor position
 			menu.css({
@@ -952,6 +953,25 @@ $(function() {
 
 	$('#menu-cancel-btn').click(function() {
 		$('#edge-context-menu').hide();
+	});
+
+	// Color picker - apply color live as user picks
+	$('#menu-color-input').on('input', function() {
+		var edgeIndex = window.currentEditEdge;
+		if (edgeIndex >= 0 && edgeIndex < link.edges.length) {
+			edgeColors[edgeIndex] = $(this).val();
+			display();
+		}
+	});
+
+	// Reset color - remove custom color and go back to default orange
+	$('#menu-reset-color-btn').click(function() {
+		var edgeIndex = window.currentEditEdge;
+		if (edgeIndex >= 0 && edgeIndex < link.edges.length) {
+			delete edgeColors[edgeIndex];
+			$('#menu-color-input').val('#ff7700');
+			display();
+		}
 	});
 
 	// Press Enter to set length
