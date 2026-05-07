@@ -10,11 +10,12 @@ $(function() {
 		var x = event.pageX - offset.left;
 		var y = event.pageY - offset.top;
 
-		// Right-click drag for panning
-		if (event.button === 2) {
+		// Middle or right-click drag for panning
+		if (event.button === 1 || event.button === 2) {
 			isPanDragging = true;
 			lastPanMouseX = x;
 			lastPanMouseY = y;
+			if (event.button === 1) event.preventDefault();
 			return;
 		}
 
@@ -488,6 +489,8 @@ $(function() {
 
 		// Backspace or Delete key
 		if (event.keyCode === 8 || event.keyCode === 46) {
+			var tag = document.activeElement && document.activeElement.tagName;
+			if (tag === 'INPUT' || tag === 'TEXTAREA') return;
 			event.preventDefault(); // Prevent browser back navigation
 
 			if (curVertex !== undefined && curVertex >= 0) {
@@ -955,7 +958,6 @@ $(function() {
 		$('#edge-context-menu').hide();
 	});
 
-	// Color picker - apply color live as user picks
 	$('#menu-color-input').on('input', function() {
 		var edgeIndex = window.currentEditEdge;
 		if (edgeIndex >= 0 && edgeIndex < link.edges.length) {
@@ -964,7 +966,6 @@ $(function() {
 		}
 	});
 
-	// Reset color - remove custom color and go back to default orange
 	$('#menu-reset-color-btn').click(function() {
 		var edgeIndex = window.currentEditEdge;
 		if (edgeIndex >= 0 && edgeIndex < link.edges.length) {
