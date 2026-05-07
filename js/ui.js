@@ -11,7 +11,7 @@ $(function() {
 		var y = event.pageY - offset.top;
 
 		// Right-click drag for panning
-		if (event.button === 2) {
+		if (event.button === 1 || event.button === 2) {
 			isPanDragging = true;
 			lastPanMouseX = x;
 			lastPanMouseY = y;
@@ -110,7 +110,7 @@ $(function() {
 			dragVertex = -1;
 			attractor = undefined;
 			update(); // recompute DOF and redraw
-		} else if (event.button !== 2) {
+		} else if (event.button !== 2 && event.button !== 1) {
 			// Normal click behavior (skip for right-click which is used for panning)
 			if (event.shiftKey)
 				mouseright(x, y);
