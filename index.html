@@ -45,7 +45,7 @@
       <div class="edit-mode-section">
         <div class="toolbar-section">
           <h3 class="toolbar-title">Edit Tools</h3>
-          
+
 
           <button id="btn-select" class="toolbar-btn active" title="Select and drag nodes">
             <span class="btn-icon">👆</span>
@@ -61,17 +61,17 @@
             <span class="btn-icon">●</span>
             <span class="btn-label">Add Node</span>
           </button>
-          
+
           <button id="btn-add-edge" class="toolbar-btn" title="Select node, then Option+Click another">
             <span class="btn-icon">─</span>
             <span class="btn-label">Add Edge</span>
           </button>
-          
+
           <button id="btn-toggle-node-open" class="toolbar-btn" title="Toggle selected node open/closed">
             <span class="btn-icon">◐</span>
             <span class="btn-label">Toggle Node</span>
           </button>
-          
+
           <button id="btn-delete" class="toolbar-btn" title="Delete selected element">
             <span class="btn-icon">🗑</span>
             <span class="btn-label">Delete</span>
@@ -86,14 +86,14 @@
             <span class="btn-icon">↪</span>
             <span class="btn-label">Redo</span>
           </button>
-          
+
           <button id="btn-label" class="toolbar-btn" title="Double-click nodes/edges to rename">
             <span class="btn-icon">🏷</span>
             <span class="btn-label">Label</span>
           </button>
         </div>
         <div class="toolbar-separator-h"></div>
-      
+
       <!-- universal display controls (available in both modes) -->
       <div class="toolbar-section">
         <h3 class="toolbar-title">Display</h3>
@@ -133,48 +133,6 @@
           <span class="btn-icon">📂</span>
           <span class="btn-label">Load XML/SVG</span>
         </button>
-      <div class="toolbar-separator-h"></div>
-        
-        <div class="toolbar-section">
-          <h3 class="toolbar-title">Trace Mode</h3>
-          
-          <button id="btn-trace" class="toolbar-btn" title="Trace motion of selected node">
-            <span class="btn-icon">📈</span>
-            <span class="btn-label">Trace</span>
-          </button>
-          
-          <button id="btn-trace-back" class="toolbar-btn" title="Play trace backwards">
-            <span class="btn-icon">⏮</span>
-            <span class="btn-label">Trace Back</span>
-          </button>
-          
-          <button id="btn-trace-loop" class="toolbar-btn active" title="Toggle loop/play once mode">
-            <span class="btn-icon">🔁</span>
-            <span class="btn-label">Loop Mode</span>
-          </button>
-        </div>
-        
-        <div class="toolbar-separator-h"></div>
-        
-        <div class="toolbar-section">
-          <h3 class="toolbar-title">Presets</h3>
-          
-          <button class="toolbar-btn preset-btn" data-preset="1">
-            <span class="btn-label">Steric</span>
-          </button>
-          
-          <button class="toolbar-btn preset-btn" data-preset="2">
-            <span class="btn-label">Allosteric</span>
-          </button>
-          
-          <button class="toolbar-btn preset-btn" data-preset="3">
-            <span class="btn-label">Catalysis</span>
-          </button>
-
-        </div>
-        
-        <div class="toolbar-separator-h"></div>
-        
         <div class="toolbar-section">
           <button id="btn-clear" class="toolbar-btn danger" title="Clear everything">
             <span class="btn-icon">⟲</span>
@@ -182,30 +140,79 @@
           </button>
         </div>
       </div>
-      
+
       <!-- PLAY MODE TOOLS (visible in play mode, hidden by default) -->
       <div class="play-mode-section" style="display: none;">
         <div class="toolbar-section">
           <h3 class="toolbar-title">Play Tools</h3>
-          
+
           <button id="btn-attractor" class="toolbar-btn" title="Place attractor with Shift+Click">
             <span class="btn-icon">🎯</span>
             <span class="btn-label">Attractor</span>
           </button>
-          
+
           <button id="btn-fix" class="toolbar-btn" title="Fix selected node in place">
             <span class="btn-icon">📍</span>
             <span class="btn-label">Fix Node</span>
           </button>
-          
+
           <button id="btn-toggle-node-open" class="toolbar-btn" title="Toggle selected node open/closed">
             <span class="btn-icon">◐</span>
             <span class="btn-label">Toggle Node</span>
           </button>
         </div>
-        
+
         <div class="toolbar-separator-h"></div>
-    
+
+      <div class="toolbar-separator-h"></div>
+
+        <div class="toolbar-section">
+          <h3 class="toolbar-title">Trace Mode</h3>
+
+          <button id="btn-trace" class="toolbar-btn" title="Trace motion of selected node">
+            <span class="btn-icon">📈</span>
+            <span class="btn-label">Trace</span>
+          </button>
+
+          <button id="btn-trace-play" class="toolbar-btn" title="Play trace">
+            <span class="btn-icon">▶</span>
+            <span class="btn-label">Play</span>
+          </button>
+
+          <button id="btn-trace-stop" class="toolbar-btn" title="Stop trace playback" disabled>
+            <span class="btn-icon">⏹</span>
+            <span class="btn-label">Stop</span>
+          </button>
+
+          <button id="btn-trace-loop" class="toolbar-btn active" title="Toggle loop/play once mode">
+            <span class="btn-icon">🔁</span>
+            <span class="btn-label">Loop</span>
+          </button>
+        </div>
+
+        <div class="toolbar-separator-h"></div>
+
+        <div class="toolbar-section">
+          <h3 class="toolbar-title">Presets</h3>
+
+          <button class="toolbar-btn preset-btn" data-preset="1">
+            <span class="btn-label">Steric</span>
+          </button>
+
+          <button class="toolbar-btn preset-btn" data-preset="2">
+            <span class="btn-label">Allosteric</span>
+          </button>
+
+          <button class="toolbar-btn preset-btn" data-preset="3">
+            <span class="btn-label">Topological</span>
+          </button>
+
+        </div>
+
+
+        <div class="toolbar-separator-h"></div>
+
+
       </div>
     </div>
 
@@ -224,6 +231,8 @@
         <button id="menu-rename-btn" style="width: 100%; padding: 8px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin-bottom: 5px;">✏️ Rename</button>
         <button id="menu-cancel-btn" style="width: 100%; padding: 8px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer;">✗ Cancel</button>
     </div>
+
+    <div id="node-picker-menu"></div>
 
     <canvas id="canvas" width="800" height="800"></canvas>
   </body>
