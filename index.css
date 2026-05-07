@@ -371,3 +371,27 @@ body.sidebar-collapsed #canvas {
 body.sidebar-collapsed #btn-sidebar-toggle {
     right: 15px;
 }
+
+#node-picker-menu {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    background: #1a1a2e;
+    color: white;
+    border: 1px solid #4fc3f7;
+    border-radius: 8px;
+    padding: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+}
+
+.node-picker-option {
+    padding: 6px 10px;
+    cursor: pointer;
+    border-radius: 5px;
+    white-space: nowrap;
+}
+
+.node-picker-option:hover {
+    background: #4fc3f7;
+    color: black;
+}
