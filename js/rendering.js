@@ -185,7 +185,7 @@ function display() {
         // Draw edge label (use custom name if available)
         if (showLabels) {
             var midpoint = numeric.mul(0.5, numeric.add(link.vertices[e.i], link.vertices[e.j]));
-            c.fillStyle = colorString(1, 1, 0.5); // Light yellow for edge labels
+            c.fillStyle = currentTheme === 'dark' ? colorString(1, 1, 0.5) : colorString(0, 0, 0);
             c.font = '10px Arial';
             var edgeLabel = edgeNames[k] || ('E' + (k + 1));
             c.fillText(edgeLabel, midpoint[0] + 5, midpoint[1] - 5);
