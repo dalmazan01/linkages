@@ -1009,12 +1009,13 @@ $(function() {
 	$(document).click(function(e) {
 		if (!$(e.target).closest('#node-picker-menu').length) {
 	
+			if ($('#node-picker-menu').is(':visible')) {
+				curVertex = undefined;
+				curEdge = undefined;
+				display();
+			}
+	
 			$('#node-picker-menu').hide();
-	
-			curVertex = undefined;
-			curEdge = undefined;
-	
-			display();
 		}
 	});
 
