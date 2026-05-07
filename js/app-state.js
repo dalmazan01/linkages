@@ -48,7 +48,6 @@ var appMode = 'edit'; // 'edit' or 'play' mode
 var nodeNames = {}; // Custom names for nodes {index: "name"}
 var nextAutoNodeNameIndex = 0;
 var edgeNames = {}; // Custom names for edges {index: "name"}
-var edgeColors = {}; // Custom colors for edges {index: "#rrggbb"}
 
 // Individual node styles
 var openNodes = {}; // Track which specific nodes are open {index: true/false}
@@ -69,6 +68,15 @@ var isPanDragging = false;
 var lastPanMouseX = 0;
 var lastPanMouseY = 0;
 var spacePressed = false;
+
+// Marquee (rubber-band) selection state
+var isMarqueeSelecting = false;
+var marqueeStart = null;   // {x, y} in screen coords
+var marqueeEnd = null;     // {x, y} in screen coords
+
+// Group drag state (dragging all selectedVertices together)
+var isGroupDragging = false;
+var groupDragLastPos = null; // {x, y} in world coords
 
 // Edge creation state (for add-edge mode)
 var edgeStartNode = -1;        // First node selected for edge (-1 = none)
@@ -294,7 +302,6 @@ function makeSnapshot() {
         angles    : link.angles.map(function(a) { return {i: a.i, j: a.j, k: a.k}; }),
         nodeNames : $.extend({}, nodeNames),
         edgeNames : $.extend({}, edgeNames),
-        edgeColors: $.extend({}, edgeColors),
         openNodes : $.extend({}, openNodes),
         solidToOpen : $.extend({}, solidToOpen),
         openToSolid : $.extend({}, openToSolid)
@@ -308,7 +315,6 @@ function restoreSnapshot(snapshot) {
     link.angles   = snapshot.angles;
     nodeNames     = snapshot.nodeNames;
     edgeNames     = snapshot.edgeNames;
-    edgeColors    = snapshot.edgeColors || {};
     openNodes     = snapshot.openNodes;
     solidToOpen   = snapshot.solidToOpen || {};
     openToSolid   = snapshot.openToSolid || {};
@@ -431,7 +437,6 @@ function reset() {
     tracks = {};
     nodeNames = {}; // Clear custom node names
     edgeNames = {}; // Clear custom edge names
-    edgeColors = {}; // Clear custom edge colors
     openNodes = {}; // Clear individual node open/closed states
     edgeStartNode = -1; // Clear edge creation state
     edgePreviewEnd = null;
