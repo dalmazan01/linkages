@@ -10,48 +10,67 @@ function idle() {
         var stillPlaying = false;
         var reachedEnd = false;
         var reachedStart = false;
-        
+
         _.each(tracks, function(track, i) {
+            i = parseInt(i, 10);
             if (track.length > 0) {
                 if (!(i in traceBackIndex)) {
-                    // Initialize based on direction
                     traceBackIndex[i] = traceDirection === -1 ? track.length - 1 : 0;
                 }
-                
+
                 var idx = traceBackIndex[i];
-                
-                // Check bounds
+
                 if (idx >= 0 && idx < track.length) {
-                    link.vertices[i] = track[idx];
+                    var targetPos = track[idx];
+
+                    // Move node (and its solid/open partner if attached) to the
+                    // target position, then let the constraint solver drag the
+                    // rest of the linkage — exactly like manual dragging does.
+                    var dragGroup = getDragGroup(i);
+                    if (dragGroup) {
+                        var isGroupFixed = link.fixed.indexOf(dragGroup.solid) >= 0 ||
+                                           link.fixed.indexOf(dragGroup.open) >= 0;
+                        if (!isGroupFixed) {
+                            link.vertices[dragGroup.solid] = [targetPos[0], targetPos[1]];
+                            link.vertices[dragGroup.open]  = [targetPos[0], targetPos[1]];
+                        }
+                    } else if (link.fixed.indexOf(i) < 0) {
+                        link.vertices[i] = [targetPos[0], targetPos[1]];
+                    }
+
+                    solveJointedSystem(10);
+
                     traceBackIndex[i] += traceDirection;
                     stillPlaying = true;
                 }
-                
-                // Check if we've reached the end or start
+
                 if (traceDirection === -1 && idx <= 0) reachedStart = true;
                 if (traceDirection === 1 && idx >= track.length - 1) reachedEnd = true;
             }
         });
         
         // Handle end conditions based on loop mode
-        if (traceLoopMode) {
-            // Loop mode: bounce back and forth
-            if (reachedStart && traceDirection === -1) {
-                traceDirection = 1;
+        var hitBoundary = (reachedStart && traceDirection === -1) ||
+                          (reachedEnd   && traceDirection === 1);
+
+        if (hitBoundary) {
+            if (traceLoopMode) {
+                // Loop mode: flip direction and clamp all indices back to the
+                // boundary so the next frame reads a valid position.
+                traceDirection *= -1;
+                _.each(tracks, function(track, i) {
+                    if (track.length > 0) {
+                        traceBackIndex[i] = traceDirection === -1 ? track.length - 1 : 0;
+                    }
+                });
                 stillPlaying = true;
-            } else if (reachedEnd && traceDirection === 1) {
-                traceDirection = -1;
-                stillPlaying = true;
-            }
-        } else {
-            // Play once mode: stop when reaching the start
-            if (reachedStart && traceDirection === -1) {
+            } else {
+                // Play once: stop at whichever end we hit
                 traceBackMode = false;
                 traceBackIndex = {};
                 traceDirection = -1;
-                $('#btn-trace-back').removeClass('active');
-                $('#btn-trace-back').find('.btn-label').text('Trace Back');
-                $('#btn-trace-back').find('.btn-icon').text('⏮');
+                $('#btn-trace-play').removeClass('active');
+                $('#btn-trace-stop').prop('disabled', true);
                 stillPlaying = false;
             }
         }
@@ -125,4 +144,3 @@ function update() {
 }
 
 link = PRESETS[0].copy();
-

@@ -763,45 +763,44 @@ $(function() {
 		}
 	});
 
-	$('#btn-trace-back').click(function() {
-		// Check if we have any traces
+	function startTracePlayback() {
 		var hasTraces = Object.keys(tracks).length > 0;
-
 		if (!hasTraces) {
 			alert('No traces available. Enable tracing on a node first and let it move.');
 			return;
 		}
-
-		// Check if any trace has recorded points
 		var hasPoints = false;
 		_.each(tracks, function(track) {
 			if (track.length > 1) hasPoints = true;
 		});
-
 		if (!hasPoints) {
 			alert('Traces are empty or too short. Move the linkage to record a trace path first.');
 			return;
 		}
+		traceBackMode = true;
+		traceBackIndex = {};
+		traceDirection = -1;
+		attractor = undefined;
+		$('#btn-trace-play').addClass('active');
+		$('#btn-trace-stop').prop('disabled', false);
+	}
 
-		// Toggle trace back mode
-		if (traceBackMode) {
-			// Stop playback
-			traceBackMode = false;
-			traceBackIndex = {};
-			traceDirection = -1;
-			$(this).removeClass('active');
-			$(this).find('.btn-label').text('Trace Back');
-			$(this).find('.btn-icon').text('⏮');
-		} else {
-			// Start playback (backward)
-			traceBackMode = true;
-			traceBackIndex = {};
-			traceDirection = -1; // Start going backward
-			attractor = undefined; // Turn off attractor
-			$(this).addClass('active');
-			$(this).find('.btn-label').text('Playing');
-			$(this).find('.btn-icon').text('⏸');
+	function stopTracePlayback() {
+		traceBackMode = false;
+		traceBackIndex = {};
+		traceDirection = -1;
+		$('#btn-trace-play').removeClass('active');
+		$('#btn-trace-stop').prop('disabled', true);
+	}
+
+	$('#btn-trace-play').click(function() {
+		if (!traceBackMode) {
+			startTracePlayback();
 		}
+	});
+
+	$('#btn-trace-stop').click(function() {
+		stopTracePlayback();
 	});
 
 	// Toggle loop mode
@@ -809,12 +808,12 @@ $(function() {
 		traceLoopMode = !traceLoopMode;
 		if (traceLoopMode) {
 			$(this).addClass('active');
-			$(this).find('.btn-label').text('Loop Mode');
+			$(this).find('.btn-label').text('Loop');
 			$(this).find('.btn-icon').text('🔁');
 		} else {
 			$(this).removeClass('active');
-			$(this).find('.btn-label').text('Play Once');
-			$(this).find('.btn-icon').text('▶');
+			$(this).find('.btn-label').text('Once');
+			$(this).find('.btn-icon').text('▶¹');
 		}
 	});
 
