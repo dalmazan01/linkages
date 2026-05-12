@@ -95,6 +95,9 @@ var undoStack = [];
 var redoStack = [];
 var MAX_UNDO = 50;
 
+// Copy/Paste clipboard
+var clipboard = null; // { vertices: [...], edges: [...], nodeNames: {...}, edgeNames: {...}, edgeColors: {...}, openNodes: {...} }
+
 //helps nodes/vertices snap together
 function dist2(a, b) {
     var dx = a[0] - b[0];
@@ -487,3 +490,97 @@ function shiftNodeData(deletedIndex) {
 }
 
 var VELOCITY_COEFF = 1;
+
+// ─── Copy / Paste ────────────────────────────────────────────────────────────
+
+/**
+ * Copy the currently selected vertices (selectedVertices) and all edges
+ * between them into the clipboard.  Works for both single-node (curVertex)
+ * and multi-select (selectedVertices) scenarios.
+ */
+function copySelection() {
+    // Build the list of indices to copy
+    var indices = selectedVertices.length > 0
+        ? selectedVertices.slice()
+        : (curVertex !== undefined && curVertex >= 0 ? [curVertex] : []);
+
+    if (indices.length === 0) return false;
+
+    // Snapshot positions
+    var verts = indices.map(function(i) {
+        return [link.vertices[i][0], link.vertices[i][1]];
+    });
+
+    // Collect only edges whose BOTH endpoints are in the selection
+    var indexSet = {};
+    indices.forEach(function(i) { indexSet[i] = true; });
+
+    var edges = [];
+    link.edges.forEach(function(e) {
+        if (indexSet[e.i] && indexSet[e.j]) {
+            edges.push({
+                // remap to local (0-based) indices within the copied set
+                li: indices.indexOf(e.i),
+                lj: indices.indexOf(e.j),
+                length: typeof e.length !== 'undefined' ? e.length : undefined
+            });
+        }
+    });
+
+    // Copy per-node metadata
+    var names  = {}, enames = {}, ecolors = {}, onodes = {};
+    indices.forEach(function(i, li) {
+        if (nodeNames[i])  names[li]  = nodeNames[i];
+        if (edgeColors[i]) ecolors[li] = edgeColors[i];
+        if (i in openNodes) onodes[li] = openNodes[i];
+    });
+
+    clipboard = { vertices: verts, edges: edges, nodeNames: names,
+                  edgeColors: ecolors, openNodes: onodes };
+    return true;
+}
+
+/**
+ * Paste the clipboard contents offset slightly from the original positions.
+ * New nodes are appended; new edges reference the new indices.
+ * After pasting the pasted nodes become the new selection.
+ */
+function pasteClipboard() {
+    if (!clipboard) return;
+
+    saveHistory();
+
+    var PASTE_OFFSET = 20; // world-unit offset so paste is visible
+
+    var base = link.vertices.length; // first new index
+    var newIndices = [];
+
+    // Add vertices
+    clipboard.vertices.forEach(function(v, li) {
+        link.vertices.push([v[0] + PASTE_OFFSET, v[1] + PASTE_OFFSET]);
+        var ni = base + li;
+        newIndices.push(ni);
+
+        // Give the new node a fresh auto-name (avoids duplicate labels)
+        nodeNames[ni] = getNextAutoNodeName();
+
+        // Restore open/solid style
+        if (li in clipboard.openNodes) openNodes[ni] = clipboard.openNodes[li];
+    });
+
+    // Add edges
+    clipboard.edges.forEach(function(e) {
+        var ni = base + e.li;
+        var nj = base + e.lj;
+        var edge = ni < nj ? {i: ni, j: nj} : {i: nj, j: ni};
+        if (typeof e.length !== 'undefined') edge.length = e.length;
+        link.edges.push(edge);
+    });
+
+    // Make the pasted nodes the new selection
+    selectedVertices = newIndices.slice();
+    curVertex = undefined;
+    curEdge   = undefined;
+
+    update();
+}

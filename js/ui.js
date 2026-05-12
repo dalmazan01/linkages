@@ -530,6 +530,23 @@ $(function() {
 			event.preventDefault();
 			redo();
 		}
+
+		// Ctrl+C / Cmd+C - copy selection
+		if ((event.ctrlKey || event.metaKey) && event.key === 'c') {
+			var tag = document.activeElement && document.activeElement.tagName;
+			if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+			event.preventDefault();
+			var copied = copySelection();
+			if (copied) refreshCopyPasteButtons();
+		}
+
+		// Ctrl+V / Cmd+V - paste
+		if ((event.ctrlKey || event.metaKey) && event.key === 'v') {
+			var tag = document.activeElement && document.activeElement.tagName;
+			if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+			event.preventDefault();
+			pasteClipboard();
+		}
 	});
 
 	// Track when space key is released
@@ -852,6 +869,30 @@ $(function() {
 			update();
 		}
 	});
+
+	// ── Copy / Paste buttons ──────────────────────────────────────────────────
+	function refreshCopyPasteButtons() {
+		var hasSelection = selectedVertices.length > 0 ||
+		                   (curVertex !== undefined && curVertex >= 0);
+		$('#btn-copy').prop('disabled', !hasSelection).css('opacity', hasSelection ? '1' : '0.4');
+		$('#btn-paste').prop('disabled', !clipboard).css('opacity', clipboard ? '1' : '0.4');
+	}
+
+	// Expose so keyboard handler can call it
+	window.refreshCopyPasteButtons = refreshCopyPasteButtons;
+
+	$('#btn-copy').click(function() {
+		var copied = copySelection();
+		if (copied) refreshCopyPasteButtons();
+	});
+
+	$('#btn-paste').click(function() {
+		pasteClipboard();
+		refreshCopyPasteButtons();
+	});
+
+	// Update copy button state whenever selection changes
+	$(document).on('selectionChanged', refreshCopyPasteButtons);
 
 	$('#btn-clear').click(function() {
 		if (confirm('Clear everything? This cannot be undone.')) {
