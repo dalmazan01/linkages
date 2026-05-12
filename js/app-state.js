@@ -54,6 +54,10 @@ var edgeColors = {}; // Custom colors for edges {index: "#rrggbb"}
 var openNodes = {}; // Track which specific nodes are open {index: true/false}
 
 
+// Pending marquee state (used to distinguish click vs drag in select-multiple)
+var pendingMarqueeStart = null;       // {x, y} screen coords of mousedown, or null
+var pendingMarqueePickedVertex = -1;  // vertex index under the mousedown, or -1
+
 //Keeps track of which nodes are attached
 var solidToOpen = {}; // solid index -> open index : where is solid attached
 var openToSolid = {}; // open index -> solid index : which solid is currently occupying open node

@@ -42,18 +42,10 @@ $(function() {
 		// Other tools (add-node/add-edge/delete/label) rely on mouseup handlers.
 		if (currentTool === 'select-multiple') {
 			var picked = pick(x, y);
-			// If clicking on an already-selected vertex, start group drag
-			if (picked.vertex >= 0 && selectedVertices.indexOf(picked.vertex) >= 0) {
-				var w = screenToWorld(x, y);
-				isGroupDragging = true;
-				groupDragLastPos = {x: w[0], y: w[1]};
-			} else {
-				// Otherwise start a fresh marquee
-				selectedVertices = [];
-				isMarqueeSelecting = true;
-				marqueeStart = {x: x, y: y};
-				marqueeEnd = {x: x, y: y};
-			}
+			// Don't commit to group-drag or marquee yet — wait to see if the user
+			// actually drags. A plain click will toggle the node in/out of the selection.
+			pendingMarqueeStart = {x: x, y: y};
+			pendingMarqueePickedVertex = picked.vertex; // may be -1 if empty space
 			display();
 			return;
 		}
@@ -93,6 +85,27 @@ $(function() {
 		var offset = $(this).offset();
 		var x = event.pageX - offset.left;
 		var y = event.pageY - offset.top;
+
+		// Pending marquee that never became a real drag = plain click
+		if (pendingMarqueeStart) {
+			pendingMarqueeStart = null;
+			var clickedVertex = pendingMarqueePickedVertex;
+			pendingMarqueePickedVertex = -1;
+			if (clickedVertex >= 0) {
+				// Toggle the clicked node in/out of the selection
+				var idx = selectedVertices.indexOf(clickedVertex);
+				if (idx >= 0) {
+					selectedVertices.splice(idx, 1);
+				} else {
+					selectedVertices.push(clickedVertex);
+				}
+			} else {
+				// Clicked empty space — clear selection
+				selectedVertices = [];
+			}
+			display();
+			return;
+		}
 
 		// Finish marquee selection
 		if (isMarqueeSelecting) {
@@ -175,6 +188,32 @@ $(function() {
 		var offset = $(this).offset();
 		var x = event.pageX - offset.left;
 		var y = event.pageY - offset.top;
+
+		// Promote a pending marquee start into a real marquee once the mouse moves
+		if (pendingMarqueeStart) {
+			var dx = x - pendingMarqueeStart.x;
+			var dy = y - pendingMarqueeStart.y;
+			if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+				var origin = pendingMarqueeStart;
+				var v = pendingMarqueePickedVertex;
+				pendingMarqueeStart = null;
+				pendingMarqueePickedVertex = -1;
+				if (v >= 0 && selectedVertices.indexOf(v) >= 0) {
+					// Dragging from an already-selected node — start group drag
+					var w = screenToWorld(x, y);
+					isGroupDragging = true;
+					groupDragLastPos = {x: w[0], y: w[1]};
+				} else {
+					// Dragging from empty space or unselected node — start marquee
+					selectedVertices = [];
+					isMarqueeSelecting = true;
+					marqueeStart = {x: origin.x, y: origin.y};
+					marqueeEnd = {x: x, y: y};
+				}
+				display();
+			}
+			return;
+		}
 
 		// Marquee selection update
 		if (isMarqueeSelecting) {
@@ -294,6 +333,11 @@ $(function() {
 			isMarqueeSelecting = false;
 			marqueeStart = null;
 			marqueeEnd = null;
+			display();
+		}
+		if (pendingMarqueeStart) {
+			pendingMarqueeStart = null;
+			pendingMarqueePickedVertex = -1;
 			display();
 		}
 		if (isGroupDragging) {
