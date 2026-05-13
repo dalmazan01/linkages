@@ -536,15 +536,27 @@ function copySelection() {
     });
 
     // Copy per-node metadata
-    var names  = {}, enames = {}, ecolors = {}, onodes = {};
+    var names  = {}, enames = {}, ecolors = {}, onodes = {}, bonds = {};
     indices.forEach(function(i, li) {
         if (nodeNames[i])  names[li]  = nodeNames[i];
         if (edgeColors[i]) ecolors[li] = edgeColors[i];
         if (i in openNodes) onodes[li] = openNodes[i];
+
+        // Preserve bond pairs — only if BOTH bonded nodes are in the selection
+        if (solidToOpen[i] !== undefined) {
+            var openPartner = solidToOpen[i];
+            var lj = indices.indexOf(openPartner);
+            if (lj >= 0) bonds[li] = { role: 'solid', partnerLi: lj };
+        }
+        if (openToSolid[i] !== undefined) {
+            var solidPartner = openToSolid[i];
+            var lj = indices.indexOf(solidPartner);
+            if (lj >= 0) bonds[li] = { role: 'open', partnerLi: lj };
+        }
     });
 
     clipboard = { vertices: verts, edges: edges, nodeNames: names,
-                  edgeColors: ecolors, openNodes: onodes };
+                  edgeColors: ecolors, openNodes: onodes, bonds: bonds };
     return true;
 }
 
@@ -569,8 +581,8 @@ function pasteClipboard() {
         var ni = base + li;
         newIndices.push(ni);
 
-        // Give the new node a fresh auto-name (avoids duplicate labels)
-        nodeNames[ni] = getNextAutoNodeName();
+        // Keep the copied name; fall back to ? only if none was saved
+        nodeNames[ni] = (li in clipboard.nodeNames) ? clipboard.nodeNames[li] : '?';
 
         // Restore open/solid style
         if (li in clipboard.openNodes) openNodes[ni] = clipboard.openNodes[li];
@@ -584,6 +596,21 @@ function pasteClipboard() {
         if (typeof e.length !== 'undefined') edge.length = e.length;
         link.edges.push(edge);
     });
+
+    // Restore bond pairs between pasted nodes
+    if (clipboard.bonds) {
+        Object.keys(clipboard.bonds).forEach(function(liStr) {
+            var li = parseInt(liStr);
+            var bond = clipboard.bonds[li];
+            var ni = base + li;
+            var nj = base + bond.partnerLi;
+            if (bond.role === 'solid') {
+                solidToOpen[ni] = nj;
+                openToSolid[nj] = ni;
+            }
+            // 'open' role is the mirror — already covered by the solid side above
+        });
+    }
 
     // Make the pasted nodes the new selection
     selectedVertices = newIndices.slice();
