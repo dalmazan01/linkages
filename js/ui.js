@@ -407,6 +407,9 @@ $(function() {
 		});
 
 		if (nodeIndex >= 0) {
+			// Block rename if this node is currently joined to another
+			if (getDragGroup(nodeIndex)) return;
+
 			// Rename node
 			var currentName = nodeNames[nodeIndex] || '?';
 			var newName = prompt('Enter new name for node:', currentName);
@@ -1025,8 +1028,9 @@ $(function() {
 	// Toggle individual node open/closed
 	$('#btn-toggle-node-open').click(function() {
 		if (selectedVertices.length > 0) {
-			// BULK TOGGLE
+			// BULK TOGGLE — skip any node that is currently joined
 			_.each(selectedVertices, function(v) {
+				if (getDragGroup(v)) return;
 				if (v in openNodes) {
 					openNodes[v] = !openNodes[v];
 				} else {
@@ -1035,7 +1039,11 @@ $(function() {
 			});
 			display();
 		} else if (curVertex !== undefined && curVertex >= 0) {
-			// Single toggle
+			// Single toggle — block if joined
+			if (getDragGroup(curVertex)) {
+				alert('Cannot change a node that is currently joined to another node.');
+				return;
+			}
 			if (curVertex in openNodes) {
 				openNodes[curVertex] = !openNodes[curVertex];
 			} else {
