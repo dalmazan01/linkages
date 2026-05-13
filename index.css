@@ -395,3 +395,11 @@ body.sidebar-collapsed #btn-sidebar-toggle {
     color: black;
 }
 /* Home button uses .action-btn styles — no extra CSS needed */
+/* Complementary highlight toggle active state */
+#btn-complement-toggle.active .toggle-track {
+    background: #ff8000;
+}
+
+#btn-complement-toggle.active .toggle-thumb {
+    transform: translateX(20px);
+}

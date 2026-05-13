@@ -688,6 +688,12 @@ $(function() {
 		display();
 	});
 
+	$('#btn-complement-toggle').click(function() {
+		complementaryHighlight = !complementaryHighlight;
+		$(this).toggleClass('active', complementaryHighlight);
+		display();
+	});
+
 	$('#btn-sidebar-toggle').click(function() {
 		document.body.classList.toggle('sidebar-collapsed');
 	
@@ -750,6 +756,12 @@ $(function() {
 		if (mode !== 'select-multiple') {
 			selectedVertices = [];
 		}
+
+		// Clear curVertex when entering select-multiple so previous single selection is dropped
+		if (mode === 'select-multiple') {
+			curVertex = undefined;
+		}
+
 		// Clear edge creation state when switching tools
 		edgeStartNode = -1;
 		edgePreviewEnd = null;
@@ -765,9 +777,11 @@ $(function() {
 		$('#btn-delete').removeClass('active');
 		$('#btn-label').removeClass('active');
 		$('#btn-attractor').removeClass('active');
+		$('#btn-select-multi').removeClass('active');
 
-		// Add active to current tool
-		$('#btn-' + mode).addClass('active');
+		// Add active to current tool button (btn-select-multi maps to select-multiple mode)
+		var btnId = mode === 'select-multiple' ? 'btn-select-multi' : 'btn-' + mode;
+		$('#' + btnId).addClass('active');
 
 		display();
 	}

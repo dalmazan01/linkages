@@ -18,6 +18,9 @@ var INFOS = 2;
 
 var currentTheme = 'dark';
 
+// When true, selected nodes are drawn in a complementary colour (orange) instead of blue
+var complementaryHighlight = false;
+
 // zoom state (simple scaling around origin)
 var scale = 1.0; // 1 = 100%
 

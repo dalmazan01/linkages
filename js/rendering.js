@@ -313,9 +313,14 @@ function display() {
                     }
                 }
             } else if (i == curVertex || selectedVertices.indexOf(i) >= 0) {
-                // NEW: Highlight blue if it's the curVertex OR in the selectedVertices array
-                c.fillStyle = colorString(0, 0.5, 1);
-                c.strokeStyle = colorString(0, 0.5, 1);
+                // Highlight selected node — blue normally, orange (complement) when toggle is on
+                if (complementaryHighlight) {
+                    c.fillStyle = colorString(1, 0.5, 0);
+                    c.strokeStyle = colorString(1, 0.5, 0);
+                } else {
+                    c.fillStyle = colorString(0, 0.5, 1);
+                    c.strokeStyle = colorString(0, 0.5, 1);
+                }
             }
             else{
                 if (currentTheme === 'light') {
@@ -415,8 +420,8 @@ function display() {
     }
 
     // Highlight complementary nodes (open and closed nodes of the same name) with yellow halo
-    // Only when a node is selected
-    if (showLabels && curVertex !== undefined) {
+    // Only when complementary highlight is enabled AND a node is selected
+    if (complementaryHighlight && showLabels && curVertex !== undefined) {
         // Get the name and style of the selected node
         var selectedName = nodeNames[curVertex] || String.fromCharCode(65 + curVertex);
         var selectedStyle = (curVertex in openNodes) ? (openNodes[curVertex] ? 'open' : 'filled') : nodeStyle;
