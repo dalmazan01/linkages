@@ -717,6 +717,9 @@ $(function() {
 		if (appMode === 'edit') {
 			// Switch to Play mode
 			appMode = 'play';
+
+			selectedVertices = [];
+
 			$(this).find('.btn-icon').text('▶️');
 			$(this).find('.btn-label').text('PLAY MODE');
 			$('.edit-mode-section').hide();
@@ -1026,7 +1029,7 @@ $(function() {
 	});
 
 	// Toggle individual node open/closed
-	$('#btn-toggle-node-open').click(function() {
+	$('#btn-toggle-node-open, #btn-toggle-node-open-play').click(function() {
 		if (selectedVertices.length > 0) {
 			// BULK TOGGLE — skip any node that is currently joined
 			_.each(selectedVertices, function(v) {

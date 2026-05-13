@@ -540,7 +540,25 @@ function copySelection() {
     });
 
     clipboard = { vertices: verts, edges: edges, nodeNames: names,
-                  edgeColors: ecolors, openNodes: onodes };
+                  edgeColors: ecolors, openNodes: onodes, attachments:[]};
+
+    _.each(selectedVertices, function(oldIndex, newIndex) {
+    
+        clipboard.nodeNames[newIndex] = nodeNames[oldIndex]; 
+    });
+
+    _.each(attachedTo, function(openIndex, solidIndex) {
+        var newSolid = oldToLocal[solidIndex];
+        var newOpen = oldToLocal[openIndex];
+    
+        if (newSolid !== undefined && newOpen !== undefined) {
+            clipboard.attachments.push({
+                solid: newSolid,
+                open: newOpen
+            });
+        }
+    });
+
     return true;
 }
 
@@ -566,7 +584,29 @@ function pasteClipboard() {
         newIndices.push(ni);
 
         // Give the new node a fresh auto-name (avoids duplicate labels)
-        nodeNames[ni] = getNextAutoNodeName();
+        
+        // Keep the copied node name
+        if (clipboard.nodeNames && clipboard.nodeNames[li] !== undefined) {
+            nodeNames[ni] = clipboard.nodeNames[li];
+        } else {
+            nodeNames[ni] = getNextAutoNodeName();
+        }
+
+        if (clipboard.attachments) {
+            clipboard.attachments.forEach(function(a) {
+                var newSolid = base + a.solid;
+                var newOpen = base + a.open;
+        
+                attachedTo[newSolid] = newOpen;
+                solidToOpen[newSolid] = newOpen;
+                openToSolid[newOpen] = newSolid;
+        
+                link.vertices[newSolid] = [
+                    link.vertices[newOpen][0],
+                    link.vertices[newOpen][1]
+                ];
+            });
+        }
 
         // Restore open/solid style
         if (li in clipboard.openNodes) openNodes[ni] = clipboard.openNodes[li];
