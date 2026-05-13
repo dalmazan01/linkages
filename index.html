@@ -114,6 +114,14 @@
           <span class="btn-icon">🔢</span>
           <span class="btn-label">Show Lengths</span>
         </button>
+        <button id="btn-zoom-in" class="toolbar-btn" title="Zoom in">
+          <span class="btn-icon">➕</span>
+          <span class="btn-label">Zoom In</span>
+        </button>
+        <button id="btn-zoom-out" class="toolbar-btn" title="Zoom out">
+          <span class="btn-icon">➖</span>
+          <span class="btn-label">Zoom Out</span>
+        </button>
       </div>
       <!-- Hidden file input for XML upload -->
       <input type="file" id="xml-file-input" accept=".xml" style="display:none;" />
@@ -158,7 +166,7 @@
             <span class="btn-label">Fix Node</span>
           </button>
 
-          <button id="btn-toggle-node-open-play" class="toolbar-btn" title="Toggle selected node open/closed">
+          <button id="btn-toggle-node-open" class="toolbar-btn" title="Toggle selected node open/closed">
             <span class="btn-icon">◐</span>
             <span class="btn-label">Toggle Node</span>
           </button>
@@ -207,6 +215,10 @@
 
           <button class="toolbar-btn preset-btn" data-preset="3">
             <span class="btn-label">Topological</span>
+          </button>
+
+          <button class="toolbar-btn preset-btn" data-preset="4">
+            <span class="btn-label">Rigid</span>
           </button>
 
         </div>
