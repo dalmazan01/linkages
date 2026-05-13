@@ -638,6 +638,39 @@ $(function() {
 		zoomCentered(0.833);
 	});
 
+	$('#btn-home').click(function() {
+		if (link.vertices.length === 0) {
+			// No nodes — just reset to initial state
+			scale = 1.0;
+			panX = 0;
+			panY = 0;
+			display();
+			return;
+		}
+
+		// Find bounding box of all nodes
+		var xs = link.vertices.map(function(v) { return v[0]; });
+		var ys = link.vertices.map(function(v) { return v[1]; });
+		var minX = Math.min.apply(null, xs);
+		var maxX = Math.max.apply(null, xs);
+		var minY = Math.min.apply(null, ys);
+		var maxY = Math.max.apply(null, ys);
+
+		// Center point of all nodes
+		var centerX = (minX + maxX) / 2;
+		var centerY = (minY + maxY) / 2;
+
+		// Reset zoom to initial scale (1.0)
+		scale = 1.0;
+
+		// Pan so that the center of all nodes lands at the center of the canvas
+		var canvas = $('#canvas')[0];
+		panX = canvas.width  / 2 - centerX * scale;
+		panY = canvas.height / 2 - centerY * scale;
+
+		display();
+	});
+
 	$('#btn-theme-toggle').click(function() {
 		const btn = this;
 	

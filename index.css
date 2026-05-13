@@ -1,4 +1,3 @@
-
 :root {
     --bg-color: #f4f4f5;
     --toolbar-bg: #ffffff; /* Light background for sidebar */
@@ -395,3 +394,4 @@ body.sidebar-collapsed #btn-sidebar-toggle {
     background: #4fc3f7;
     color: black;
 }
+/* Home button uses .action-btn styles — no extra CSS needed */
