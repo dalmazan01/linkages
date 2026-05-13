@@ -40,6 +40,13 @@ function saveLinkageAsXML() {
     });
     lines.push('  </angles>');
 
+    // Bonds (solidToOpen pairs)
+    lines.push('  <bonds>');
+    _.each(solidToOpen, function(openIndex, solidIndex) {
+        lines.push('    <bond solid="' + solidIndex + '" open="' + openIndex + '"/>');
+    });
+    lines.push('  </bonds>');
+
     lines.push('</linkage>');
 
     var xml  = lines.join('\n');
@@ -116,6 +123,15 @@ function loadLinkageFromXML(file) {
                     j: parseInt(a.getAttribute('j')),
                     k: parseInt(a.getAttribute('k'))
                 });
+            });
+
+
+            // Bonds
+            xmlDoc.querySelectorAll('bonds > bond').forEach(function(b) {
+                var solid = parseInt(b.getAttribute('solid'));
+                var open  = parseInt(b.getAttribute('open'));
+                solidToOpen[solid] = open;
+                openToSolid[open]  = solid;
             });
 
             update();
@@ -239,7 +255,13 @@ function saveLinkageAsSVG() {
         lines.push('        <angle i="' + a.i + '" j="' + a.j + '" k="' + a.k + '"/>');
     });
     lines.push('      </angles>');
-    
+
+    lines.push('      <bonds>');
+    _.each(solidToOpen, function(openIndex, solidIndex) {
+        lines.push('        <bond solid="' + solidIndex + '" open="' + openIndex + '"/>');
+    });
+    lines.push('      </bonds>');
+
     lines.push('    </linkage>');
     lines.push('  </metadata>');
 
