@@ -272,7 +272,7 @@ function getDragGroup(i) {
 
 //helps keep names static and does not change when deleted previous node
 function getNextAutoNodeName() {
-    var name = String.fromCharCode(65 + nextAutoNodeNameIndex);
+    var name = '?';
     nextAutoNodeNameIndex++;
     return name;
 }
