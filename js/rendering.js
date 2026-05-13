@@ -29,9 +29,10 @@ function strokeLine(c, u, v) {
     c.stroke();
 }
 
-function fillPoint(c, v, style, nodeIndex) {
+function fillPoint(c, v, style, nodeIndex, sizeOverride) {
     // Use individual node style if specified, otherwise use global nodeStyle
     var drawStyle = style || nodeStyle;
+    var baseSize = sizeOverride || VERTEX_SIZE;
     
     // Check if the current node is pinned (fixed)
     var isFixed = (nodeIndex !== undefined && link.fixed.indexOf(nodeIndex) !== -1);
@@ -41,7 +42,7 @@ function fillPoint(c, v, style, nodeIndex) {
         // draw a larger ring around it with a small gap.
         var radius = (nodeIndex !== undefined && openToSolid[nodeIndex] !== undefined)
             ? OCCUPIED_OPEN_RING_RADIUS
-            : VERTEX_SIZE / 2;
+            : baseSize / 2;
 
         c.beginPath();
         c.lineWidth = (nodeIndex !== undefined && openToSolid[nodeIndex] !== undefined)
@@ -58,7 +59,7 @@ function fillPoint(c, v, style, nodeIndex) {
     } else {
         // Draw filled shape
         c.beginPath();
-        var radius = VERTEX_SIZE / 2;
+        var radius = baseSize / 2;
 
         // Draw a square if fixed, otherwise a circle
         if (isFixed) {
@@ -366,6 +367,22 @@ function display() {
     if (attractor) {
         c.fillStyle = colorString(0.5, 0.5, 0.5)
         fillPoint(c, attractor);
+    }
+
+    // Draw the table-picked highlighted node on top at slightly larger size
+    if (highlightedVertex >= 0 && highlightedVertex < link.vertices.length) {
+        var hv = link.vertices[highlightedVertex];
+        var hStyle = (highlightedVertex in openNodes)
+            ? (openNodes[highlightedVertex] ? 'open' : 'filled')
+            : nodeStyle;
+        var HIGHLIGHT_SIZE = VERTEX_SIZE * 1.9; // ~90% bigger
+        c.save();
+        c.fillStyle = colorString(0, 0.5, 1);
+        c.strokeStyle = colorString(0, 0.5, 1);
+        c.shadowBlur = 18;
+        c.shadowColor = 'rgba(0, 140, 255, 0.8)';
+        fillPoint(c, hv, hStyle, highlightedVertex, HIGHLIGHT_SIZE);
+        c.restore();
     }
 
     // Transperent preview node when in add node mode

@@ -49,8 +49,16 @@ function showNodePicker(hits, pageX, pageY) {
             .text(name + '  (#' + i + ')')
             .click(function() {
                 curVertex = i;
-
                 curEdge = undefined;
+
+                // Temporarily boost this node to top + enlarged so it's easy to grab
+                if (highlightedVertexTimer) clearTimeout(highlightedVertexTimer);
+                highlightedVertex = i;
+                highlightedVertexTimer = setTimeout(function() {
+                    highlightedVertex = -1;
+                    highlightedVertexTimer = null;
+                    display();
+                }, 1200);
 
                 menu.hide();
                 display();
