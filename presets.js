@@ -122,3 +122,30 @@ topologicalPreset.presetNodeNames = {
 // You can add presetOpenNodes here if you need some to be open.
 
 PRESETS.push(topologicalPreset);
+
+// PRESET 3: Rigid (square with cross-bracing)
+var rigidPreset = new Linkage();
+
+rigidPreset.vertices = [
+    [435.9986312971215,  208.01179918025326], // Node 0
+    [835.9982392635744,  208.57246476617757], // Node 1
+    [838.503389175735,   608.5646199690485],  // Node 2
+    [438.50378285636464, 608.0039543728086]   // Node 3
+];
+
+rigidPreset.fixed = [];
+
+rigidPreset.edges = [
+    { i: 0, j: 1, length: 400 },
+    { i: 1, j: 2, length: 400 },
+    { i: 2, j: 3, length: 400 },
+    { i: 0, j: 3, length: 400 },
+    { i: 0, j: 2, length: 567.8491369693028 },
+    { i: 1, j: 3, length: 563.5134051323317 }
+];
+
+rigidPreset.presetNodeNames = { 0: '?', 1: '?', 2: '?', 3: '?' };
+rigidPreset.presetOpenNodes = {};
+rigidPreset.presetName = 'Rigid';
+
+PRESETS.push(rigidPreset);
